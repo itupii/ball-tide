@@ -142,7 +142,7 @@ export function AiMatchAnalysis({ buildContext }: { buildContext: () => Promise<
   const [running, setRunning] = useState(false);
   const ctrlRef = useRef<AbortController | null>(null);
   const run = async () => {
-    if (!user) return toast("Entre na sua conta para usar a análise com IA");
+    if (!user) { toast("Entre na sua conta para usar a análise com IA"); return; }
     setRunning(true);
     setText("");
     const ctrl = new AbortController();
@@ -156,7 +156,7 @@ export function AiMatchAnalysis({ buildContext }: { buildContext: () => Promise<
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.session?.access_token ?? ""}` },
         body: JSON.stringify({ mode: "match", context: context.slice(0, 15900) }),
       });
-      if (!res.ok || !res.body) return toast.error(await res.text());
+      if (!res.ok || !res.body) { toast.error(await res.text()); return; }
       const reader = res.body.getReader();
       const dec = new TextDecoder();
       for (;;) {
