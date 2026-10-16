@@ -186,6 +186,16 @@ export function findPatterns(games: PastGame[]): Pattern[] {
     ["Vence em casa", (g) => g.homeAway === "home" && g.result === "W"],
     ["Não perde fora", (g) => g.homeAway === "away" && g.result !== "L"],
   ];
+  if (games.some((g) => g.corners != null)) {
+    tests.push(
+      ["Mais de 8.5 escanteios no jogo", (g) => (g.corners ?? 0) + (g.cornersAgainst ?? 0) > 8.5],
+      ["Time ganha 5+ escanteios", (g) => (g.corners ?? 0) >= 5],
+      ["Time sofre 5+ escanteios", (g) => (g.cornersAgainst ?? 0) >= 5],
+      ["Mais de 2.5 cartões no jogo", (g) => (g.yellows ?? 0) + (g.reds ?? 0) > 2.5],
+      ["Time comete 10+ faltas", (g) => (g.fouls ?? 0) >= 10],
+      ["Time finaliza 10+ vezes", (g) => (g.shots ?? 0) >= 10],
+    );
+  }
   const windows = [5, 10, games.length];
   const out: Pattern[] = [];
   for (const [label, fn] of tests) {
