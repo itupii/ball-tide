@@ -110,12 +110,19 @@ function MatchPage() {
           </div>
         )}
         {m.venue && <p className="mt-4 text-center text-xs text-muted-foreground">{m.venue}</p>}
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          {m.state !== "post" && <AlertButton on={alerts.on} toggle={alerts.toggle} />}
+          <button onClick={openEval} className="rounded-md border px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Avaliar equipes</button>
+          <button onClick={() => setTab("ia")} className="rounded-md border px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Análise com IA</button>
+        </div>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto rounded-lg border bg-card p-1">
+      <div id="match-tabs" className="flex gap-1 overflow-x-auto rounded-lg border bg-card p-1">
         {(
           [
             ["prob", "Probabilidades"],
+            ["avaliar", "Avaliar equipes"],
+            ["ia", "Análise IA"],
             ["stats", "Estatísticas"],
             ["resumo", "Lances"],
             ["forma", "Forma & H2H"],
@@ -129,6 +136,15 @@ function MatchPage() {
       </div>
 
       {tab === "prob" && <ProbTab data={data} pr={pr} label={label} />}
+
+      {tab === "avaliar" && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <TeamEval team={m.home} />
+          <TeamEval team={m.away} />
+        </div>
+      )}
+
+      {tab === "ia" && <AiMatchAnalysis buildContext={buildContext} />}
 
       {tab === "stats" && (
         <Section title="Estatísticas da partida">
