@@ -10,33 +10,115 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BilheteRouteImport } from './routes/bilhete'
+import { Route as OddsRouteImport } from './routes/odds'
+import { Route as ApiAiTicketRouteImport } from './routes/api/ai-ticket'
+import { Route as JogoIdRouteImport } from './routes/jogo.$id'
+import { Route as TimeIdRouteImport } from './routes/time.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BilheteRoute = BilheteRouteImport.update({
+  id: '/bilhete',
+  path: '/bilhete',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OddsRoute = OddsRouteImport.update({
+  id: '/odds',
+  path: '/odds',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAiTicketRoute = ApiAiTicketRouteImport.update({
+  id: '/api/ai-ticket',
+  path: '/api/ai-ticket',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JogoIdRoute = JogoIdRouteImport.update({
+  id: '/jogo/$id',
+  path: '/jogo/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TimeIdRoute = TimeIdRouteImport.update({
+  id: '/time/$id',
+  path: '/time/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/bilhete': typeof BilheteRoute
+  '/odds': typeof OddsRoute
+  '/api/ai-ticket': typeof ApiAiTicketRoute
+  '/jogo/$id': typeof JogoIdRoute
+  '/time/$id': typeof TimeIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/bilhete': typeof BilheteRoute
+  '/odds': typeof OddsRoute
+  '/api/ai-ticket': typeof ApiAiTicketRoute
+  '/jogo/$id': typeof JogoIdRoute
+  '/time/$id': typeof TimeIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/bilhete': typeof BilheteRoute
+  '/odds': typeof OddsRoute
+  '/api/ai-ticket': typeof ApiAiTicketRoute
+  '/jogo/$id': typeof JogoIdRoute
+  '/time/$id': typeof TimeIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/bilhete'
+    | '/odds'
+    | '/api/ai-ticket'
+    | '/jogo/$id'
+    | '/time/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/bilhete'
+    | '/odds'
+    | '/api/ai-ticket'
+    | '/jogo/$id'
+    | '/time/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/bilhete'
+    | '/odds'
+    | '/api/ai-ticket'
+    | '/jogo/$id'
+    | '/time/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
+  BilheteRoute: typeof BilheteRoute
+  OddsRoute: typeof OddsRoute
+  ApiAiTicketRoute: typeof ApiAiTicketRoute
+  JogoIdRoute: typeof JogoIdRoute
+  TimeIdRoute: typeof TimeIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +130,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bilhete': {
+      id: '/bilhete'
+      path: '/bilhete'
+      fullPath: '/bilhete'
+      preLoaderRoute: typeof BilheteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/odds': {
+      id: '/odds'
+      path: '/odds'
+      fullPath: '/odds'
+      preLoaderRoute: typeof OddsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ai-ticket': {
+      id: '/api/ai-ticket'
+      path: '/api/ai-ticket'
+      fullPath: '/api/ai-ticket'
+      preLoaderRoute: typeof ApiAiTicketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jogo/$id': {
+      id: '/jogo/$id'
+      path: '/jogo/$id'
+      fullPath: '/jogo/$id'
+      preLoaderRoute: typeof JogoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/time/$id': {
+      id: '/time/$id'
+      path: '/time/$id'
+      fullPath: '/time/$id'
+      preLoaderRoute: typeof TimeIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
+  BilheteRoute: BilheteRoute,
+  OddsRoute: OddsRoute,
+  ApiAiTicketRoute: ApiAiTicketRoute,
+  JogoIdRoute: JogoIdRoute,
+  TimeIdRoute: TimeIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
