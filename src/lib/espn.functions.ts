@@ -168,6 +168,17 @@ export interface PastGame {
   goalsAgainst: number;
   result: "W" | "D" | "L";
   competition: string;
+  // team discipline/attack stats for this game (undefined when unavailable)
+  corners?: number;
+  cornersAgainst?: number;
+  fouls?: number;
+  yellows?: number;
+  reds?: number;
+  shots?: number;
+  shotsOnTarget?: number;
+  possession?: number;
+  offsides?: number;
+  saves?: number;
 }
 export interface StandingRow {
   teamId: string;
