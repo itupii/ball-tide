@@ -80,7 +80,11 @@ export const Route = createFileRoute("/api/ai-ticket")({
               `${i + 1}. ${s.match} | Mercado: ${s.market} | Palpite: ${s.pick} | Odd: ${s.odds.toFixed(2)} (implícita ${(100 / s.odds).toFixed(1)}%) | Modelo: ${s.modelPct != null ? s.modelPct + "%" : "n/d"}`,
           )
           .join("\n");
-        const userMsg = `Bilhete (${body.selections.length} seleções), odd total ${total.toFixed(2)}, stake R$ ${body.stake}.\n${lines}\n\nContexto estatístico adicional:\n${body.context ?? "(nenhum)"}`;
+        if (body.mode === "ticket" && body.selections.length === 0) return new Response("Bilhete vazio.", { status: 400 });
+        const userMsg =
+          body.mode === "match"
+            ? `Dados da partida:\n${body.context ?? "(nenhum)"}`
+            : `Bilhete (${body.selections.length} seleções), odd total ${total.toFixed(2)}, stake R$ ${body.stake}.\n${lines}\n\nContexto estatístico adicional:\n${body.context ?? "(nenhum)"}`;
 
         const upstream = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
           method: "POST",
@@ -88,7 +92,7 @@ export const Route = createFileRoute("/api/ai-ticket")({
           headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "fetch" },
           body: JSON.stringify({
             model: "openai/gpt-6-astra",
-            instructions: SYSTEM,
+            instructions: body.mode === "match" ? MATCH_SYSTEM : SYSTEM,
             input: [{ role: "user", content: userMsg }],
             stream: true,
             store: false,
