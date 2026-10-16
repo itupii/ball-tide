@@ -1,9 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { getMatch, type PastGame } from "@/lib/espn.functions";
 import { edge, fairOdds, findPatterns, predict, profile } from "@/lib/analytics";
 import { Bar, FormPill, LiveBadge, OddButton, Section, TeamLogo } from "@/components/radar/ui";
+import { AiMatchAnalysis, AlertButton, TeamEval, teamHistoryQuery, useLiveAlerts } from "@/components/radar/match-extras";
 import { cn } from "@/lib/utils";
 import type { Selection } from "@/lib/slip";
 
@@ -11,7 +12,7 @@ const matchQuery = (id: string) =>
   queryOptions({
     queryKey: ["match", id],
     queryFn: () => getMatch({ data: { id } }),
-    refetchInterval: (q) => (q.state.data?.match.state === "in" ? 15_000 : false),
+    refetchInterval: (q) => (q.state.data?.match.state === "in" ? 15_000 : q.state.data?.match.state === "pre" ? 60_000 : false),
   });
 
 export const Route = createFileRoute("/jogo/$id")({
@@ -35,18 +36,45 @@ export const Route = createFileRoute("/jogo/$id")({
   errorComponent: () => <p className="py-12 text-center text-muted-foreground">Não foi possível carregar esta partida.</p>,
 });
 
-type Tab = "resumo" | "stats" | "prob" | "forma" | "tabela";
+type Tab = "resumo" | "stats" | "prob" | "forma" | "tabela" | "avaliar" | "ia";
 
 function MatchPage() {
   const { id } = Route.useParams();
   const { data } = useQuery(matchQuery(id));
+  const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("prob");
+  const alerts = useLiveAlerts(data?.match);
   if (!data) return null;
   const { match: m, stats, homeLast, awayLast, h2h, standings } = data;
   const hp = profile(homeLast);
   const ap = profile(awayLast);
   const pr = predict(hp, ap);
   const label = `${m.home.short} x ${m.away.short}`;
+  const openEval = () => {
+    setTab("avaliar");
+    setTimeout(() => document.getElementById("match-tabs")?.scrollIntoView({ behavior: "smooth" }), 50);
+  };
+
+  const buildContext = async () => {
+    const [th, ta] = await Promise.all([qc.ensureQueryData(teamHistoryQuery(m.home.id)).catch(() => null), qc.ensureQueryData(teamHistoryQuery(m.away.id)).catch(() => null)]);
+    const fmt = (name: string, g: PastGame[]) => {
+      const p = profile(g), h = profile(g, "home"), a = profile(g, "away");
+      const pats = findPatterns(g).slice(0, 6).map((x) => `${x.label} (${x.hits}/${x.total})`).join("; ");
+      return `${name} — ${p.games} jogos: V${p.winPct}% E${p.drawPct}% D${p.lossPct}%, gols pró ${p.gfAvg}/j, contra ${p.gaAvg}/j, over2.5 ${p.over25}%, BTTS ${p.btts}%, sem sofrer ${p.cleanSheet}%, não marcou ${p.failedToScore}%, forma ${p.form.join("")}, ${p.streak}. Casa: V${h.winPct}% gols ${h.gfAvg}-${h.gaAvg}. Fora: V${a.winPct}% gols ${a.gfAvg}-${a.gaAvg}. Padrões: ${pats || "nenhum"}.`;
+    };
+    const st = standings.filter((r) => r.teamId === m.home.id || r.teamId === m.away.id).map((r) => `${r.team}: ${r.rank}º, ${r.points} pts em ${r.played}j, saldo ${r.gf - r.ga}`).join("; ");
+    return [
+      `Partida: ${m.home.name} (mandante) x ${m.away.name} — ${m.league} — ${m.date}. Status: ${m.status} ${m.state === "in" ? `placar ${m.home.score}-${m.away.score} ${m.clock}` : ""}`,
+      fmt(m.home.name, th?.games?.slice(0, 20) ?? homeLast),
+      fmt(m.away.name, ta?.games?.slice(0, 20) ?? awayLast),
+      `Confronto direto: ${h2h.map((g) => `${g.goalsFor}-${g.goalsAgainst}`).join(", ") || "n/d"}`,
+      `Classificação: ${st || "n/d"}`,
+      `Modelo Poisson: xG ${pr.lambdaHome}x${pr.lambdaAway}; 1 ${pr.home}% X ${pr.draw}% 2 ${pr.away}%; over1.5 ${pr.over["1.5"]}% over2.5 ${pr.over["2.5"]}% over3.5 ${pr.over["3.5"]}%; BTTS ${pr.btts}%; placares ${pr.scores.slice(0, 4).map((s) => `${s.score} ${s.p}%`).join(", ")}`,
+      m.odds ? `Odds (${m.odds.provider}): 1 ${m.odds.home ?? "-"} X ${m.odds.draw ?? "-"} 2 ${m.odds.away ?? "-"}, linha de gols ${m.odds.overUnder ?? "-"}` : "Odds: n/d",
+      stats.length ? `Estatísticas ao vivo: ${stats.map((s) => `${s.label} ${s.home}-${s.away}`).join("; ")}` : "",
+      m.events.length ? `Lances: ${m.events.map((e) => `${e.minute} ${e.type} ${e.player ?? ""}`).join("; ")}` : "",
+    ].join("\n");
+  };
 
   return (
     <div className="space-y-5">
@@ -56,13 +84,13 @@ function MatchPage() {
           {m.state === "in" ? <LiveBadge text={m.clock || m.status} /> : <span suppressHydrationWarning>{m.state === "pre" ? new Date(m.date).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : m.status}</span>}
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <TeamHead t={m.home} />
+          <TeamHead t={m.home} onClick={openEval} />
           <div className="tabular text-center text-5xl font-bold md:text-6xl">
             <span className={cn(m.state === "in" && "text-primary")}>{m.home.score ?? "-"}</span>
             <span className="mx-2 text-muted-foreground">:</span>
             <span className={cn(m.state === "in" && "text-primary")}>{m.away.score ?? "-"}</span>
           </div>
-          <TeamHead t={m.away} right />
+          <TeamHead t={m.away} right onClick={openEval} />
         </div>
         {m.events.filter((e) => e.goal).length > 0 && (
           <div className="mt-4 grid grid-cols-2 gap-4 text-xs text-muted-foreground">
@@ -82,12 +110,19 @@ function MatchPage() {
           </div>
         )}
         {m.venue && <p className="mt-4 text-center text-xs text-muted-foreground">{m.venue}</p>}
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          {m.state !== "post" && <AlertButton on={alerts.on} toggle={alerts.toggle} />}
+          <button onClick={openEval} className="rounded-md border px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Avaliar equipes</button>
+          <button onClick={() => setTab("ia")} className="rounded-md border px-3 py-1 text-xs text-muted-foreground hover:text-foreground">Análise com IA</button>
+        </div>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto rounded-lg border bg-card p-1">
+      <div id="match-tabs" className="flex gap-1 overflow-x-auto rounded-lg border bg-card p-1">
         {(
           [
             ["prob", "Probabilidades"],
+            ["avaliar", "Avaliar equipes"],
+            ["ia", "Análise IA"],
             ["stats", "Estatísticas"],
             ["resumo", "Lances"],
             ["forma", "Forma & H2H"],
@@ -101,6 +136,15 @@ function MatchPage() {
       </div>
 
       {tab === "prob" && <ProbTab data={data} pr={pr} label={label} />}
+
+      {tab === "avaliar" && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <TeamEval team={m.home} />
+          <TeamEval team={m.away} />
+        </div>
+      )}
+
+      {tab === "ia" && <AiMatchAnalysis buildContext={buildContext} />}
 
       {tab === "stats" && (
         <Section title="Estatísticas da partida">
@@ -203,13 +247,13 @@ function MatchPage() {
   );
 }
 
-function TeamHead({ t, right }: { t: { id: string; name: string; logo: string | null; form: string | null; record: string | null }; right?: boolean }) {
+function TeamHead({ t, right, onClick }: { t: { id: string; name: string; logo: string | null; form: string | null; record: string | null }; right?: boolean; onClick: () => void }) {
   return (
-    <Link to="/time/$id" params={{ id: t.id }} className={cn("flex flex-col items-center gap-2 text-center hover:opacity-90", right ? "md:items-center" : "")}>
+    <button type="button" onClick={onClick} className={cn("flex flex-col items-center gap-2 text-center hover:opacity-90", right ? "md:items-center" : "")}>
       <TeamLogo src={t.logo} alt={t.name} size={64} />
       <span className="font-display text-lg font-semibold uppercase leading-tight md:text-2xl">{t.name}</span>
       {t.form && <span className="text-xs tracking-[0.3em] text-muted-foreground">{t.form}</span>}
-    </Link>
+    </button>
   );
 }
 
