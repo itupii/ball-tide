@@ -84,13 +84,13 @@ function MatchPage() {
           {m.state === "in" ? <LiveBadge text={m.clock || m.status} /> : <span suppressHydrationWarning>{m.state === "pre" ? new Date(m.date).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : m.status}</span>}
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-          <TeamHead t={m.home} />
+          <TeamHead t={m.home} onClick={openEval} />
           <div className="tabular text-center text-5xl font-bold md:text-6xl">
             <span className={cn(m.state === "in" && "text-primary")}>{m.home.score ?? "-"}</span>
             <span className="mx-2 text-muted-foreground">:</span>
             <span className={cn(m.state === "in" && "text-primary")}>{m.away.score ?? "-"}</span>
           </div>
-          <TeamHead t={m.away} right />
+          <TeamHead t={m.away} right onClick={openEval} />
         </div>
         {m.events.filter((e) => e.goal).length > 0 && (
           <div className="mt-4 grid grid-cols-2 gap-4 text-xs text-muted-foreground">
@@ -247,13 +247,13 @@ function MatchPage() {
   );
 }
 
-function TeamHead({ t, right }: { t: { id: string; name: string; logo: string | null; form: string | null; record: string | null }; right?: boolean }) {
+function TeamHead({ t, right, onClick }: { t: { id: string; name: string; logo: string | null; form: string | null; record: string | null }; right?: boolean; onClick: () => void }) {
   return (
-    <Link to="/time/$id" params={{ id: t.id }} className={cn("flex flex-col items-center gap-2 text-center hover:opacity-90", right ? "md:items-center" : "")}>
+    <button type="button" onClick={onClick} className={cn("flex flex-col items-center gap-2 text-center hover:opacity-90", right ? "md:items-center" : "")}>
       <TeamLogo src={t.logo} alt={t.name} size={64} />
       <span className="font-display text-lg font-semibold uppercase leading-tight md:text-2xl">{t.name}</span>
       {t.form && <span className="text-xs tracking-[0.3em] text-muted-foreground">{t.form}</span>}
-    </Link>
+    </button>
   );
 }
 
