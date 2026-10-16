@@ -39,6 +39,19 @@ export function MatchCharts({ home, away, pr }: { home: T; away: T; pr: Probabil
     { k: "1", v: pr.home }, { k: "X", v: pr.draw }, { k: "2", v: pr.away },
     { k: "+1.5", v: pr.over["1.5"] ?? 0 }, { k: "+2.5", v: pr.over["2.5"] ?? 0 }, { k: "+3.5", v: pr.over["3.5"] ?? 0 }, { k: "BTTS", v: pr.btts },
   ];
+  const dh = disciplineStats(hg), da = disciplineStats(ag);
+  const disc = [
+    ["Escanteios/j", dh.cornersAvg, da.cornersAvg],
+    ["Esc. sofridos/j", dh.cornersAgainstAvg, da.cornersAgainstAvg],
+    ["Faltas/j", dh.foulsAvg, da.foulsAvg],
+    ["Cartões/j", dh.cardsAvg, da.cardsAvg],
+    ["Finalizações/j", dh.shotsAvg, da.shotsAvg],
+    ["Chutes no gol/j", dh.shotsOnTargetAvg, da.shotsOnTargetAvg],
+  ].map(([k, x, y]) => ({ k, [home.short]: x, [away.short]: y }));
+  const cornerTrend = Array.from({ length: n }, (_, i) => {
+    const x = hg[n - 1 - i]!, y = ag[n - 1 - i]!;
+    return { j: `J${i + 1}`, [home.short]: x.corners ?? null, [away.short]: y.corners ?? null };
+  });
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Section title="Perfil comparado (últimos 20)">

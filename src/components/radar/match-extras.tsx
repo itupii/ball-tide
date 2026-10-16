@@ -66,6 +66,7 @@ export function TeamEval({ team }: { team: { id: string; name: string; logo: str
   const games = (data?.games ?? []).slice(0, win);
   if (!games.length) return <Section title={team.name}><p className="text-sm text-muted-foreground">Sem histórico disponível.</p></Section>;
   const p = profile(games), ph = profile(games, "home"), pa = profile(games, "away");
+  const d = disciplineStats(games), dh = disciplineStats(games, "home"), da = disciplineStats(games, "away");
   const x = extra(games);
   const patterns = findPatterns(data?.games ?? []).slice(0, 6);
   const row = (k: keyof TeamProfile, suf = "%") => [`${p[k]}${suf}`, `${ph[k]}${suf}`, `${pa[k]}${suf}`] as const;
@@ -117,6 +118,33 @@ export function TeamEval({ team }: { team: { id: string; name: string; logo: str
           <SplitRow label="Não marcou" all={row("failedToScore")[0]} home={row("failedToScore")[1]} away={row("failedToScore")[2]} />
         </tbody>
       </table>
+      {d.sample > 0 && (
+        <>
+          <p className="mb-2 mt-4 text-xs uppercase tracking-wider text-muted-foreground">
+            Escanteios, faltas e cartões — média dos últimos {d.sample} jogos
+          </p>
+          <table className="w-full text-sm">
+            <thead className="text-xs text-muted-foreground">
+              <tr className="border-b"><th className="py-1 text-left font-medium">Métrica</th><th className="py-1 text-right font-medium">Geral</th><th className="py-1 text-right font-medium">Casa</th><th className="py-1 text-right font-medium">Fora</th></tr>
+            </thead>
+            <tbody>
+              <SplitRow label="Escanteios a favor/j" all={d.cornersAvg} home={dh.cornersAvg} away={da.cornersAvg} />
+              <SplitRow label="Escanteios contra/j" all={d.cornersAgainstAvg} home={dh.cornersAgainstAvg} away={da.cornersAgainstAvg} />
+              <SplitRow label="Escanteios no jogo/j" all={d.cornersTotalAvg} home={dh.cornersTotalAvg} away={da.cornersTotalAvg} />
+              <SplitRow label="Jogos com +8.5 escanteios" all={`${d.over85Corners}%`} home={`${dh.over85Corners}%`} away={`${da.over85Corners}%`} />
+              <SplitRow label="Faltas cometidas/j" all={d.foulsAvg} home={dh.foulsAvg} away={da.foulsAvg} />
+              <SplitRow label="Cartões amarelos/j" all={d.yellowsAvg} home={dh.yellowsAvg} away={da.yellowsAvg} />
+              <SplitRow label="Cartões vermelhos/j" all={d.redsAvg} home={dh.redsAvg} away={da.redsAvg} />
+              <SplitRow label="Cartões no total/j" all={d.cardsAvg} home={dh.cardsAvg} away={da.cardsAvg} />
+              <SplitRow label="Finalizações/j" all={d.shotsAvg} home={dh.shotsAvg} away={da.shotsAvg} />
+              <SplitRow label="Chutes no gol/j" all={d.shotsOnTargetAvg} home={dh.shotsOnTargetAvg} away={da.shotsOnTargetAvg} />
+              <SplitRow label="Posse de bola" all={`${d.possessionAvg}%`} home={`${dh.possessionAvg}%`} away={`${da.possessionAvg}%`} />
+              <SplitRow label="Impedimentos/j" all={d.offsidesAvg} home={dh.offsidesAvg} away={da.offsidesAvg} />
+              <SplitRow label="Defesas do goleiro/j" all={d.savesAvg} home={dh.savesAvg} away={da.savesAvg} />
+            </tbody>
+          </table>
+        </>
+      )}
       <p className="mb-2 mt-4 text-xs uppercase tracking-wider text-muted-foreground">Padrões</p>
       {patterns.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhum padrão forte.</p>
