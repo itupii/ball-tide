@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 const Body = z.object({
+  mode: z.enum(["ticket", "match"]).default("ticket"),
   selections: z
     .array(
       z.object({
@@ -14,11 +15,21 @@ const Body = z.object({
         date: z.string().max(40).optional(),
       }),
     )
-    .min(1)
-    .max(20),
-  stake: z.number().min(0).max(1_000_000),
-  context: z.string().max(12000).optional(),
+    .max(20)
+    .default([]),
+  stake: z.number().min(0).max(1_000_000).default(0),
+  context: z.string().max(16000).optional(),
 });
+
+const MATCH_SYSTEM = `Você é um analista quantitativo de futebol. Responda SEMPRE em português do Brasil, em Markdown, de forma direta e com números.
+Analise a partida a partir das estatísticas recebidas (forma, médias, mandante/visitante, padrões, confronto direto, modelo Poisson, odds e dados ao vivo se houver).
+Seções curtas:
+## Leitura geral (quem chega melhor e por quê)
+## Pontos fortes e fracos de cada equipe
+## Mercados com valor (compare probabilidade do modelo x odd; liste 3 a 5 palpites com confiança baixa/média/alta)
+## Brechas e padrões (tendências fortes, discrepâncias entre forma e odd)
+## Riscos e alertas
+Lembre que é uma simulação e não há garantia de resultado.`;
 
 const SYSTEM = `Você é um analista quantitativo de futebol e apostas esportivas. Responda SEMPRE em português do Brasil.
 Analise o bilhete recebido usando as probabilidades do modelo (Poisson baseado na forma recente), as odds e o contexto estatístico.
