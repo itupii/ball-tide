@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Bar as RBar, BarChart, CartesianGrid, Legend, Line, LineChart, PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { profile, type Probabilities } from "@/lib/analytics";
+import { disciplineStats, profile, type Probabilities } from "@/lib/analytics";
 import { teamHistoryQuery } from "@/components/radar/match-extras";
 import { Section } from "@/components/radar/ui";
 
