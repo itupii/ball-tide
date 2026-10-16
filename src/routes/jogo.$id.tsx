@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { getMatch, type PastGame } from "@/lib/espn.functions";
-import { edge, fairOdds, findPatterns, predict, profile } from "@/lib/analytics";
+import { disciplineStats, edge, fairOdds, findPatterns, predict, profile } from "@/lib/analytics";
 import { Bar, FormPill, LiveBadge, OddButton, Section, TeamLogo } from "@/components/radar/ui";
 import { MatchCharts } from "@/components/radar/charts";
 import { AiMatchAnalysis, AlertButton, TeamEval, teamHistoryQuery, useLiveAlerts } from "@/components/radar/match-extras";
