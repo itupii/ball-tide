@@ -182,7 +182,6 @@ function Index() {
 
 function MatchRow({ m, flash }: { m: MatchSummary; flash: boolean }) {
   const time = new Date(m.date).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  const goals = m.events.filter((e) => e.goal).length;
   const reds = m.events.filter((e) => e.red).length;
   return (
     <li className={cn(flash && "flash-goal")}>
@@ -206,13 +205,12 @@ function MatchRow({ m, flash }: { m: MatchSummary; flash: boolean }) {
           ))}
         </div>
         <div className="flex items-center gap-4">
-          {(goals > 0 || reds > 0) && (
-            <div className="hidden text-[11px] text-muted-foreground sm:block">
-              {reds > 0 && <span className="mr-1 inline-block h-3 w-2 rounded-[1px] bg-loss align-middle" />}
-              {m.odds?.home && <span className="tabular">1 {m.odds.home} · X {m.odds.draw} · 2 {m.odds.away}</span>}
+          {reds > 0 && <span className="inline-block h-3 w-2 rounded-[1px] bg-loss" title="Cartão vermelho" />}
+          {m.odds?.home && (
+            <div className="tabular hidden text-[11px] text-muted-foreground sm:block">
+              1 {m.odds.home} · X {m.odds.draw} · 2 {m.odds.away}
             </div>
           )}
-          {!goals && m.odds?.home && <div className="tabular hidden text-[11px] text-muted-foreground sm:block">1 {m.odds.home} · X {m.odds.draw} · 2 {m.odds.away}</div>}
           <div className="tabular w-6 space-y-1 text-right text-sm font-bold">
             <div className={cn(m.state === "in" && "text-primary")}>{m.home.score ?? "-"}</div>
             <div className={cn(m.state === "in" && "text-primary")}>{m.away.score ?? "-"}</div>
