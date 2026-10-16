@@ -1,9 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { getMatch, type PastGame } from "@/lib/espn.functions";
 import { edge, fairOdds, findPatterns, predict, profile } from "@/lib/analytics";
 import { Bar, FormPill, LiveBadge, OddButton, Section, TeamLogo } from "@/components/radar/ui";
+import { AiMatchAnalysis, AlertButton, TeamEval, teamHistoryQuery, useLiveAlerts } from "@/components/radar/match-extras";
 import { cn } from "@/lib/utils";
 import type { Selection } from "@/lib/slip";
 
@@ -11,7 +12,7 @@ const matchQuery = (id: string) =>
   queryOptions({
     queryKey: ["match", id],
     queryFn: () => getMatch({ data: { id } }),
-    refetchInterval: (q) => (q.state.data?.match.state === "in" ? 15_000 : false),
+    refetchInterval: (q) => (q.state.data?.match.state === "in" ? 15_000 : q.state.data?.match.state === "pre" ? 60_000 : false),
   });
 
 export const Route = createFileRoute("/jogo/$id")({
