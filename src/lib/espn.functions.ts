@@ -145,9 +145,7 @@ function leagueFromLink(e: any): { name: string; slug: string } {
   return { name: e.season?.slug ? "" : "", slug: m?.[1] ?? "" };
 }
 
-export const getScoreboard = createServerFn({ method: "GET" })
-  .inputValidator((d) => z.object({ date: z.string().regex(/^\d{8}$/) }).parse(d))
-  .handler(async ({ data }) => {
+async function loadScoreboard(data: { date: string }) {
     try {
       const [json, dd] = await Promise.all([
         espn(`/all/scoreboard?dates=${data.date}&limit=500`),
@@ -168,7 +166,7 @@ export const getScoreboard = createServerFn({ method: "GET" })
       console.error(err);
       return { matches: [] as MatchSummary[], error: "Não foi possível carregar os jogos agora.", fetchedAt: new Date().toISOString() };
     }
-  });
+}
 
 export interface TeamStatLine {
   key: string;
@@ -254,9 +252,7 @@ function parsePastGames(block: any, teamId: string): PastGame[] {
   });
 }
 
-export const getMatch = createServerFn({ method: "GET" })
-  .inputValidator((d) => z.object({ id: z.string().regex(/^\d+$/) }).parse(d))
-  .handler(async ({ data }) => {
+async function loadMatch(data: { id: string }) {
     const s = await espn(`/all/summary?event=${data.id}`);
     const header = s.header ?? {};
     const comp = header.competitions?.[0] ?? {};
@@ -325,11 +321,9 @@ export const getMatch = createServerFn({ method: "GET" })
     const odds = normOdds(pc) ?? base.odds;
 
     return { match: { ...base, odds }, stats, homeLast, awayLast, h2h, standings, fetchedAt: new Date().toISOString() };
-  });
+}
 
-export const getTeamHistory = createServerFn({ method: "GET" })
-  .inputValidator((d) => z.object({ teamId: z.string().regex(/^\d+$/) }).parse(d))
-  .handler(async ({ data }) => {
+async function loadTeamHistory(data: { teamId: string }) {
     const out: { team: { id: string; name: string; logo: string | null; league: string }; games: PastGame[] } = {
       team: { id: data.teamId, name: "", logo: null, league: "" },
       games: [],
@@ -407,4 +401,27 @@ export const getTeamHistory = createServerFn({ method: "GET" })
       await Promise.all(recent.slice(i, i + 5).map(enrich));
     }
     return out;
-  });
+  }
+
+/* Server first; if the data source blocks the server, read it straight from the browser. */
+const sbIn = (d: unknown) => z.object({ date: z.string().regex(/^\d{8}$/) }).parse(d);
+const mIn = (d: unknown) => z.object({ id: z.string().regex(/^\d+$/) }).parse(d);
+const tIn = (d: unknown) => z.object({ teamId: z.string().regex(/^\d+$/) }).parse(d);
+const scoreboardServer = createServerFn({ method: "GET" }).inputValidator(sbIn).handler(({ data }) => loadScoreboard(data));
+const matchServer = createServerFn({ method: "GET" }).inputValidator(mIn).handler(({ data }) => loadMatch(data));
+const teamServer = createServerFn({ method: "GET" }).inputValidator(tIn).handler(({ data }) => loadTeamHistory(data));
+const inBrowser = () => typeof window !== "undefined";
+
+export async function getScoreboard({ data }: { data: { date: string } }) {
+  const r = await scoreboardServer({ data }).catch(() => null);
+  if (r && !r.error && r.matches.length) return r;
+  return inBrowser() ? loadScoreboard(sbIn(data)) : r ?? loadScoreboard(sbIn(data));
+}
+export async function getMatch({ data }: { data: { id: string } }) {
+  try { return await matchServer({ data }); } catch (e) { if (!inBrowser()) throw e; return loadMatch(mIn(data)); }
+}
+export async function getTeamHistory({ data }: { data: { teamId: string } }) {
+  const r = await teamServer({ data }).catch(() => null);
+  if (r && r.games.length) return r;
+  return inBrowser() ? loadTeamHistory(tIn(data)) : r ?? loadTeamHistory(tIn(data));
+}
