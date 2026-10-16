@@ -17,7 +17,7 @@ async function espn(path: string): Promise<any> {
   for (const h of hosts) {
     for (const p of [path, path.replace(/&limit=\d+/, "")]) {
       try {
-        const res = await fetch(`${h}${p}`, { headers });
+        const res = await fetch(`${h}${p}`, typeof window === "undefined" ? { headers } : undefined);
         if (res.ok) return res.json();
         last = res.status;
       } catch {
