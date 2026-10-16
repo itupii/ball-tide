@@ -14,7 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      favorite_teams: {
+        Row: {
+          created_at: string
+          id: string
+          logo: string | null
+          team_id: string
+          team_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo?: string | null
+          team_id: string
+          team_name: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo?: string | null
+          team_id?: string
+          team_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tickets: {
+        Row: {
+          ai_analysis: string | null
+          created_at: string
+          id: string
+          name: string
+          selections: Json
+          stake: number
+          total_odds: number
+          user_id: string
+        }
+        Insert: {
+          ai_analysis?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          selections?: Json
+          stake?: number
+          total_odds?: number
+          user_id?: string
+        }
+        Update: {
+          ai_analysis?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          selections?: Json
+          stake?: number
+          total_odds?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
