@@ -356,5 +356,36 @@ export const getTeamHistory = createServerFn({ method: "GET" })
       }
     }
     out.games.sort((a, b) => +new Date(b.date) - +new Date(a.date));
+
+    // Enrich the most recent games with per-game team stats (corners, fouls, cards…)
+    const statNum = (list: any[], name: string): number | undefined => {
+      const v = list.find((x: any) => x.name === name)?.value;
+      return typeof v === "number" && Number.isFinite(v) ? v : undefined;
+    };
+    const enrich = async (g: PastGame) => {
+      try {
+        const s = await espn(`/all/summary?event=${g.id}`);
+        const teams: any[] = s.boxscore?.teams ?? [];
+        const mine = teams.find((t) => String(t.team?.id) === data.teamId)?.statistics ?? [];
+        const opp = teams.find((t) => String(t.team?.id) !== data.teamId)?.statistics ?? [];
+        if (!mine.length) return;
+        g.corners = statNum(mine, "wonCorners");
+        g.cornersAgainst = statNum(opp, "wonCorners");
+        g.fouls = statNum(mine, "foulsCommitted");
+        g.yellows = statNum(mine, "yellowCards");
+        g.reds = statNum(mine, "redCards");
+        g.shots = statNum(mine, "totalShots");
+        g.shotsOnTarget = statNum(mine, "shotsOnTarget");
+        g.possession = statNum(mine, "possessionPct");
+        g.offsides = statNum(mine, "offsides");
+        g.saves = statNum(mine, "saves");
+      } catch {
+        /* keep game without extra stats */
+      }
+    };
+    const recent = out.games.slice(0, 10);
+    for (let i = 0; i < recent.length; i += 5) {
+      await Promise.all(recent.slice(i, i + 5).map(enrich));
+    }
     return out;
   });
