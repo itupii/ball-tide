@@ -100,6 +100,40 @@ export function MatchCharts({ home, away, pr }: { home: T; away: T; pr: Probabil
           </ResponsiveContainer>
         </div>
       </Section>
+      {dh.sample > 0 && da.sample > 0 && (
+        <>
+          <Section title={`Disciplina e volume de jogo — média dos últimos ${Math.min(dh.sample, da.sample)} jogos`}>
+            <div className="h-64">
+              <ResponsiveContainer>
+                <BarChart data={disc}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+                  <XAxis dataKey="k" {...axis} />
+                  <YAxis {...axis} />
+                  <Tooltip {...tip} cursor={{ fill: "var(--surface)" }} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <RBar dataKey={home.short} fill={C1} radius={[4, 4, 0, 0]} />
+                  <RBar dataKey={away.short} fill={C2} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Section>
+          <Section title={`Escanteios a favor — últimos ${n} jogos`}>
+            <div className="h-64">
+              <ResponsiveContainer>
+                <LineChart data={cornerTrend}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+                  <XAxis dataKey="j" {...axis} />
+                  <YAxis allowDecimals={false} {...axis} />
+                  <Tooltip {...tip} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line type="monotone" dataKey={home.short} stroke={C1} strokeWidth={2} />
+                  <Line type="monotone" dataKey={away.short} stroke={C2} strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Section>
+        </>
+      )}
       <Section title="Probabilidades do modelo (%)">
         <div className="h-64">
           <ResponsiveContainer>
