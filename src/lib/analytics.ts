@@ -119,6 +119,50 @@ export const fairOdds = (pctValue: number) => (pctValue > 0 ? +(100 / pctValue).
 /** Value = model probability × bookmaker odds − 1. Positive means a possible edge. */
 export const edge = (pctValue: number, odds: number) => +((pctValue / 100) * odds - 1).toFixed(3);
 
+export interface DisciplineStats {
+  sample: number;
+  cornersAvg: number;
+  cornersAgainstAvg: number;
+  cornersTotalAvg: number;
+  foulsAvg: number;
+  yellowsAvg: number;
+  redsAvg: number;
+  cardsAvg: number;
+  shotsAvg: number;
+  shotsOnTargetAvg: number;
+  possessionAvg: number;
+  offsidesAvg: number;
+  savesAvg: number;
+  over85Corners: number;
+  over45CornersFor: number;
+  over25Cards: number;
+}
+
+/** Averages of corners/fouls/cards/etc. over games that have those stats. */
+export function disciplineStats(games: PastGame[], filter?: "home" | "away"): DisciplineStats {
+  const g = (filter ? games.filter((x) => x.homeAway === filter) : games).filter((x) => x.corners != null);
+  const n = g.length;
+  const avg = (f: (x: PastGame) => number | undefined) => (n ? +(g.reduce((a, x) => a + (f(x) ?? 0), 0) / n).toFixed(2) : 0);
+  return {
+    sample: n,
+    cornersAvg: avg((x) => x.corners),
+    cornersAgainstAvg: avg((x) => x.cornersAgainst),
+    cornersTotalAvg: avg((x) => (x.corners ?? 0) + (x.cornersAgainst ?? 0)),
+    foulsAvg: avg((x) => x.fouls),
+    yellowsAvg: avg((x) => x.yellows),
+    redsAvg: avg((x) => x.reds),
+    cardsAvg: avg((x) => (x.yellows ?? 0) + (x.reds ?? 0)),
+    shotsAvg: avg((x) => x.shots),
+    shotsOnTargetAvg: avg((x) => x.shotsOnTarget),
+    possessionAvg: avg((x) => x.possession),
+    offsidesAvg: avg((x) => x.offsides),
+    savesAvg: avg((x) => x.saves),
+    over85Corners: pct(g.filter((x) => (x.corners ?? 0) + (x.cornersAgainst ?? 0) > 8.5).length, n),
+    over45CornersFor: pct(g.filter((x) => (x.corners ?? 0) > 4.5).length, n),
+    over25Cards: pct(g.filter((x) => (x.yellows ?? 0) + (x.reds ?? 0) > 2.5).length, n),
+  };
+}
+
 export interface Pattern {
   label: string;
   hits: number;
