@@ -5,9 +5,27 @@ const BASE = "https://site.api.espn.com/apis/site/v2/sports/soccer";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function espn(path: string): Promise<any> {
-  const res = await fetch(`${BASE}${path}`, { headers: { accept: "application/json" } });
-  if (!res.ok) throw new Error(`Fonte de dados indisponível (${res.status})`);
-  return res.json();
+  const headers = {
+    accept: "application/json, text/plain, */*",
+    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+    "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+    origin: "https://www.espn.com",
+    referer: "https://www.espn.com/",
+  };
+  const hosts = [BASE, "https://site.web.api.espn.com/apis/site/v2/sports/soccer"];
+  let last = 0;
+  for (const h of hosts) {
+    for (const p of [path, path.replace(/&limit=\d+/, "")]) {
+      try {
+        const res = await fetch(`${h}${p}`, { headers });
+        if (res.ok) return res.json();
+        last = res.status;
+      } catch {
+        last = -1;
+      }
+    }
+  }
+  throw new Error(`Fonte de dados indisponível (${last})`);
 }
 
 export type MatchState = "pre" | "in" | "post";
