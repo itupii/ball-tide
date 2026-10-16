@@ -36,18 +36,45 @@ export const Route = createFileRoute("/jogo/$id")({
   errorComponent: () => <p className="py-12 text-center text-muted-foreground">Não foi possível carregar esta partida.</p>,
 });
 
-type Tab = "resumo" | "stats" | "prob" | "forma" | "tabela";
+type Tab = "resumo" | "stats" | "prob" | "forma" | "tabela" | "avaliar" | "ia";
 
 function MatchPage() {
   const { id } = Route.useParams();
   const { data } = useQuery(matchQuery(id));
+  const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("prob");
+  const alerts = useLiveAlerts(data?.match);
   if (!data) return null;
   const { match: m, stats, homeLast, awayLast, h2h, standings } = data;
   const hp = profile(homeLast);
   const ap = profile(awayLast);
   const pr = predict(hp, ap);
   const label = `${m.home.short} x ${m.away.short}`;
+  const openEval = () => {
+    setTab("avaliar");
+    setTimeout(() => document.getElementById("match-tabs")?.scrollIntoView({ behavior: "smooth" }), 50);
+  };
+
+  const buildContext = async () => {
+    const [th, ta] = await Promise.all([qc.ensureQueryData(teamHistoryQuery(m.home.id)).catch(() => null), qc.ensureQueryData(teamHistoryQuery(m.away.id)).catch(() => null)]);
+    const fmt = (name: string, g: PastGame[]) => {
+      const p = profile(g), h = profile(g, "home"), a = profile(g, "away");
+      const pats = findPatterns(g).slice(0, 6).map((x) => `${x.label} (${x.hits}/${x.total})`).join("; ");
+      return `${name} — ${p.games} jogos: V${p.winPct}% E${p.drawPct}% D${p.lossPct}%, gols pró ${p.gfAvg}/j, contra ${p.gaAvg}/j, over2.5 ${p.over25}%, BTTS ${p.btts}%, sem sofrer ${p.cleanSheet}%, não marcou ${p.failedToScore}%, forma ${p.form.join("")}, ${p.streak}. Casa: V${h.winPct}% gols ${h.gfAvg}-${h.gaAvg}. Fora: V${a.winPct}% gols ${a.gfAvg}-${a.gaAvg}. Padrões: ${pats || "nenhum"}.`;
+    };
+    const st = standings.filter((r) => r.teamId === m.home.id || r.teamId === m.away.id).map((r) => `${r.team}: ${r.rank}º, ${r.points} pts em ${r.played}j, saldo ${r.gf - r.ga}`).join("; ");
+    return [
+      `Partida: ${m.home.name} (mandante) x ${m.away.name} — ${m.league} — ${m.date}. Status: ${m.status} ${m.state === "in" ? `placar ${m.home.score}-${m.away.score} ${m.clock}` : ""}`,
+      fmt(m.home.name, th?.games?.slice(0, 20) ?? homeLast),
+      fmt(m.away.name, ta?.games?.slice(0, 20) ?? awayLast),
+      `Confronto direto: ${h2h.map((g) => `${g.goalsFor}-${g.goalsAgainst}`).join(", ") || "n/d"}`,
+      `Classificação: ${st || "n/d"}`,
+      `Modelo Poisson: xG ${pr.lambdaHome}x${pr.lambdaAway}; 1 ${pr.home}% X ${pr.draw}% 2 ${pr.away}%; over1.5 ${pr.over["1.5"]}% over2.5 ${pr.over["2.5"]}% over3.5 ${pr.over["3.5"]}%; BTTS ${pr.btts}%; placares ${pr.scores.slice(0, 4).map((s) => `${s.score} ${s.p}%`).join(", ")}`,
+      m.odds ? `Odds (${m.odds.provider}): 1 ${m.odds.home ?? "-"} X ${m.odds.draw ?? "-"} 2 ${m.odds.away ?? "-"}, linha de gols ${m.odds.overUnder ?? "-"}` : "Odds: n/d",
+      stats.length ? `Estatísticas ao vivo: ${stats.map((s) => `${s.label} ${s.home}-${s.away}`).join("; ")}` : "",
+      m.events.length ? `Lances: ${m.events.map((e) => `${e.minute} ${e.type} ${e.player ?? ""}`).join("; ")}` : "",
+    ].join("\n");
+  };
 
   return (
     <div className="space-y-5">
