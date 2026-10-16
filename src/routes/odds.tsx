@@ -35,7 +35,7 @@ function best(ev: OddsEvent, market: string, name: string, point?: number) {
 }
 
 function OddsPage() {
-  const [sport, setSport] = useState(LEAGUES[0].key);
+  const [sport, setSport] = useState(LEAGUES[0]!.key);
   const { data, isLoading } = useQuery({
     queryKey: ["odds", sport],
     queryFn: () => getOdds({ data: { sport } }),

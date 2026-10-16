@@ -65,6 +65,7 @@ function Index() {
       const t = setTimeout(() => setFlash(new Set()), 2600);
       return () => clearTimeout(t);
     }
+    return undefined;
   }, [matches]);
 
   const filtered = matches.filter(

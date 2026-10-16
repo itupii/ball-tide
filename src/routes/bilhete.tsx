@@ -43,7 +43,10 @@ function SlipPage() {
   });
 
   const runAI = async () => {
-    if (!user) return toast("Entre na sua conta para usar a análise com IA");
+    if (!user) {
+      toast("Entre na sua conta para usar a análise com IA");
+      return;
+    }
     setAnalysis("");
     setRunning(true);
     const ctrl = new AbortController();
@@ -79,7 +82,10 @@ function SlipPage() {
   };
 
   const save = async () => {
-    if (!user) return toast("Entre na sua conta para salvar bilhetes");
+    if (!user) {
+      toast("Entre na sua conta para salvar bilhetes");
+      return;
+    }
     const { error } = await supabase.from("tickets").insert({
       name: `Bilhete ${new Date().toLocaleDateString("pt-BR")} · ${items.length} seleções`,
       selections: JSON.parse(JSON.stringify(items)),
@@ -87,7 +93,10 @@ function SlipPage() {
       total_odds: totalOdds,
       ai_analysis: analysis || null,
     });
-    if (error) return toast.error("Não foi possível salvar.");
+    if (error) {
+      toast.error("Não foi possível salvar.");
+      return;
+    }
     toast.success("Bilhete salvo");
     qc.invalidateQueries({ queryKey: ["tickets"] });
   };

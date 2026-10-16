@@ -232,7 +232,7 @@ function ProbTab({ data, pr, label }: { data: Awaited<ReturnType<typeof getMatch
   const rows: { market: string; picks: [string, number, number | null | undefined][] }[] = [
     { market: "Resultado final", picks: [[m.home.short, pr.home, book?.home], ["Empate", pr.draw, book?.draw], [m.away.short, pr.away, book?.away]] },
     { market: "Dupla chance", picks: [["1X", pr.doubleChance["1X"], null], ["12", pr.doubleChance["12"], null], ["X2", pr.doubleChance.X2, null]] },
-    { market: "Gols", picks: [["Mais de 1.5", pr.over["1.5"], null], ["Mais de 2.5", pr.over["2.5"], null], ["Menos de 2.5", +(100 - pr.over["2.5"]).toFixed(1), null], ["Mais de 3.5", pr.over["3.5"], null]] },
+    { market: "Gols", picks: [["Mais de 1.5", (pr.over["1.5"] ?? 0), null], ["Mais de 2.5", (pr.over["2.5"] ?? 0), null], ["Menos de 2.5", +(100 - (pr.over["2.5"] ?? 0)).toFixed(1), null], ["Mais de 3.5", (pr.over["3.5"] ?? 0), null]] },
     { market: "Ambas marcam", picks: [["Sim", pr.btts, null], ["Não", +(100 - pr.btts).toFixed(1), null]] },
   ];
   return (

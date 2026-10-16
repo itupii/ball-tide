@@ -33,7 +33,7 @@ export function profile(games: PastGame[], filter?: "home" | "away"): TeamProfil
   const total = (x: PastGame) => x.goalsFor + x.goalsAgainst;
   let streak = "";
   if (g.length) {
-    const r = g[0].result;
+    const r = g[0]!.result;
     let c = 0;
     for (const x of g) {
       if (x.result === r) c++;
@@ -90,7 +90,7 @@ export function predict(home: TeamProfile, away: TeamProfile, homeAdv = 1.1): Pr
       else if (i === j) pd += p;
       else pa += p;
       if (i > 0 && j > 0) btts += p;
-      for (const k of Object.keys(over)) if (i + j > parseFloat(k)) over[k] += p;
+      for (const k of Object.keys(over)) if (i + j > parseFloat(k)) over[k] = (over[k] ?? 0) + p;
       scores.push({ score: `${i}-${j}`, p });
     }
   scores.sort((a, b) => b.p - a.p);

@@ -53,7 +53,10 @@ function TeamPage() {
   const patterns = findPatterns(data.games);
 
   const toggleFav = async () => {
-    if (!user) return toast("Entre na sua conta para salvar favoritos");
+    if (!user) {
+      toast("Entre na sua conta para salvar favoritos");
+      return;
+    }
     if (fav.data) await supabase.from("favorite_teams").delete().eq("id", fav.data.id);
     else await supabase.from("favorite_teams").insert({ team_id: id, team_name: data.team.name, logo: data.team.logo });
     qc.invalidateQueries({ queryKey: ["fav", id] });
