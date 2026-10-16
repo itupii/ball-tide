@@ -359,7 +359,8 @@ export const getTeamHistory = createServerFn({ method: "GET" })
 
     // Enrich the most recent games with per-game team stats (corners, fouls, cards…)
     const statNum = (list: any[], name: string): number | undefined => {
-      const v = list.find((x: any) => x.name === name)?.value;
+      const st = list.find((x: any) => x.name === name);
+      const v = st?.value ?? parseFloat(String(st?.displayValue ?? "").replace(",", "."));
       return typeof v === "number" && Number.isFinite(v) ? v : undefined;
     };
     const enrich = async (g: PastGame) => {
