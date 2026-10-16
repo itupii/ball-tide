@@ -77,8 +77,12 @@ export interface Probabilities {
 /** Poisson model combining attack of one side with the defence of the other. */
 export function predict(home: TeamProfile, away: TeamProfile, homeAdv = 1.1): Probabilities {
   const base = 1.35;
-  const lh = Math.max(0.2, ((home.gfAvg || base) * (away.gaAvg || base)) / base) * homeAdv;
-  const la = Math.max(0.2, ((away.gfAvg || base) * (home.gaAvg || base)) / base) / homeAdv;
+  // shrink small samples toward the league average so 5-game form doesn't dominate
+  const shrink = (v: number, n: number) => (v * n + base * 6) / (n + 6);
+  const hA = shrink(home.gfAvg, home.games), hD = shrink(home.gaAvg, home.games);
+  const aA = shrink(away.gfAvg, away.games), aD = shrink(away.gaAvg, away.games);
+  const lh = Math.max(0.2, (hA * aD) / base) * homeAdv;
+  const la = Math.max(0.2, (aA * hD) / base) / homeAdv;
   const N = 8;
   let ph = 0, pd = 0, pa = 0, btts = 0;
   const over: Record<string, number> = { "0.5": 0, "1.5": 0, "2.5": 0, "3.5": 0, "4.5": 0 };

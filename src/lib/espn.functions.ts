@@ -131,9 +131,14 @@ export const getScoreboard = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ date: z.string().regex(/^\d{8}$/) }).parse(d))
   .handler(async ({ data }) => {
     try {
-      const json = await espn(`/all/scoreboard?dates=${data.date}&limit=500`);
+      const [json, dd] = await Promise.all([
+        espn(`/all/scoreboard?dates=${data.date}&limit=500`),
+        fetch("https://site.web.api.espn.com/apis/site/v2/leagues/dropdown?sport=soccer&limit=500")
+          .then((r) => (r.ok ? r.json() : { leagues: [] }))
+          .catch(() => ({ leagues: [] })),
+      ]);
       const leagues: Record<string, { name: string; slug: string }> = {};
-      for (const l of json.leagues ?? []) leagues[String(l.id)] = { name: l.name, slug: l.slug };
+      for (const l of [...(dd.leagues ?? []), ...(json.leagues ?? [])]) leagues[String(l.id)] = { name: l.name, slug: l.slug };
       const matches: MatchSummary[] = (json.events ?? []).map((e: any) => {
         const lid = (e.uid ?? "").match(/l:(\d+)/)?.[1];
         const lg = lid ? leagues[lid] : undefined;
@@ -227,7 +232,7 @@ export const getMatch = createServerFn({ method: "GET" })
     const header = s.header ?? {};
     const comp = header.competitions?.[0] ?? {};
     const base = normalizeEvent(
-      { ...header, status: comp.status, competitions: [{ ...comp, details: comp.details ?? s.keyEvents?.filter((k: any) => k.scoringPlay || /card/i.test(k.type?.text ?? "")).map((k: any) => ({ ...k, athletesInvolved: k.participants?.map((p: any) => p.athlete) })) }] },
+      { ...header, date: comp.date ?? header.date, status: comp.status, competitions: [{ ...comp, details: comp.details ?? s.keyEvents?.filter((k: any) => k.scoringPlay || /card/i.test(k.type?.text ?? "")).map((k: any) => ({ ...k, athletesInvolved: k.participants?.map((p: any) => p.athlete) })) }] },
       { name: header.league?.name ?? "", slug: header.league?.slug ?? "" },
     );
     if (!comp.details && s.keyEvents) {

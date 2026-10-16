@@ -53,7 +53,7 @@ function MatchPage() {
       <div className="rounded-xl border bg-card p-5 md:p-7">
         <div className="mb-4 flex items-center justify-between text-xs text-muted-foreground">
           <span className="font-display text-sm uppercase tracking-wider">{m.league}</span>
-          {m.state === "in" ? <LiveBadge text={m.clock || m.status} /> : <span>{m.state === "pre" ? new Date(m.date).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : m.status}</span>}
+          {m.state === "in" ? <LiveBadge text={m.clock || m.status} /> : <span suppressHydrationWarning>{m.state === "pre" ? new Date(m.date).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : m.status}</span>}
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
           <TeamHead t={m.home} />
