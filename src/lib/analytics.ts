@@ -119,6 +119,50 @@ export const fairOdds = (pctValue: number) => (pctValue > 0 ? +(100 / pctValue).
 /** Value = model probability × bookmaker odds − 1. Positive means a possible edge. */
 export const edge = (pctValue: number, odds: number) => +((pctValue / 100) * odds - 1).toFixed(3);
 
+export interface DisciplineStats {
+  sample: number;
+  cornersAvg: number;
+  cornersAgainstAvg: number;
+  cornersTotalAvg: number;
+  foulsAvg: number;
+  yellowsAvg: number;
+  redsAvg: number;
+  cardsAvg: number;
+  shotsAvg: number;
+  shotsOnTargetAvg: number;
+  possessionAvg: number;
+  offsidesAvg: number;
+  savesAvg: number;
+  over85Corners: number;
+  over45CornersFor: number;
+  over25Cards: number;
+}
+
+/** Averages of corners/fouls/cards/etc. over games that have those stats. */
+export function disciplineStats(games: PastGame[], filter?: "home" | "away"): DisciplineStats {
+  const g = (filter ? games.filter((x) => x.homeAway === filter) : games).filter((x) => x.corners != null);
+  const n = g.length;
+  const avg = (f: (x: PastGame) => number | undefined) => (n ? +(g.reduce((a, x) => a + (f(x) ?? 0), 0) / n).toFixed(2) : 0);
+  return {
+    sample: n,
+    cornersAvg: avg((x) => x.corners),
+    cornersAgainstAvg: avg((x) => x.cornersAgainst),
+    cornersTotalAvg: avg((x) => (x.corners ?? 0) + (x.cornersAgainst ?? 0)),
+    foulsAvg: avg((x) => x.fouls),
+    yellowsAvg: avg((x) => x.yellows),
+    redsAvg: avg((x) => x.reds),
+    cardsAvg: avg((x) => (x.yellows ?? 0) + (x.reds ?? 0)),
+    shotsAvg: avg((x) => x.shots),
+    shotsOnTargetAvg: avg((x) => x.shotsOnTarget),
+    possessionAvg: avg((x) => x.possession),
+    offsidesAvg: avg((x) => x.offsides),
+    savesAvg: avg((x) => x.saves),
+    over85Corners: pct(g.filter((x) => (x.corners ?? 0) + (x.cornersAgainst ?? 0) > 8.5).length, n),
+    over45CornersFor: pct(g.filter((x) => (x.corners ?? 0) > 4.5).length, n),
+    over25Cards: pct(g.filter((x) => (x.yellows ?? 0) + (x.reds ?? 0) > 2.5).length, n),
+  };
+}
+
 export interface Pattern {
   label: string;
   hits: number;
@@ -142,6 +186,16 @@ export function findPatterns(games: PastGame[]): Pattern[] {
     ["Vence em casa", (g) => g.homeAway === "home" && g.result === "W"],
     ["Não perde fora", (g) => g.homeAway === "away" && g.result !== "L"],
   ];
+  if (games.some((g) => g.corners != null)) {
+    tests.push(
+      ["Mais de 8.5 escanteios no jogo", (g) => (g.corners ?? 0) + (g.cornersAgainst ?? 0) > 8.5],
+      ["Time ganha 5+ escanteios", (g) => (g.corners ?? 0) >= 5],
+      ["Time sofre 5+ escanteios", (g) => (g.cornersAgainst ?? 0) >= 5],
+      ["Mais de 2.5 cartões no jogo", (g) => (g.yellows ?? 0) + (g.reds ?? 0) > 2.5],
+      ["Time comete 10+ faltas", (g) => (g.fouls ?? 0) >= 10],
+      ["Time finaliza 10+ vezes", (g) => (g.shots ?? 0) >= 10],
+    );
+  }
   const windows = [5, 10, games.length];
   const out: Pattern[] = [];
   for (const [label, fn] of tests) {

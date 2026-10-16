@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { getMatch, type PastGame } from "@/lib/espn.functions";
-import { edge, fairOdds, findPatterns, predict, profile } from "@/lib/analytics";
+import { disciplineStats, edge, fairOdds, findPatterns, predict, profile } from "@/lib/analytics";
 import { Bar, FormPill, LiveBadge, OddButton, Section, TeamLogo } from "@/components/radar/ui";
 import { MatchCharts } from "@/components/radar/charts";
 import { AiMatchAnalysis, AlertButton, TeamEval, teamHistoryQuery, useLiveAlerts } from "@/components/radar/match-extras";
@@ -61,7 +61,11 @@ function MatchPage() {
     const fmt = (name: string, g: PastGame[]) => {
       const p = profile(g), h = profile(g, "home"), a = profile(g, "away");
       const pats = findPatterns(g).slice(0, 6).map((x) => `${x.label} (${x.hits}/${x.total})`).join("; ");
-      return `${name} — ${p.games} jogos: V${p.winPct}% E${p.drawPct}% D${p.lossPct}%, gols pró ${p.gfAvg}/j, contra ${p.gaAvg}/j, over2.5 ${p.over25}%, BTTS ${p.btts}%, sem sofrer ${p.cleanSheet}%, não marcou ${p.failedToScore}%, forma ${p.form.join("")}, ${p.streak}. Casa: V${h.winPct}% gols ${h.gfAvg}-${h.gaAvg}. Fora: V${a.winPct}% gols ${a.gfAvg}-${a.gaAvg}. Padrões: ${pats || "nenhum"}.`;
+      const d = disciplineStats(g);
+      const disc = d.sample
+        ? ` Escanteios ${d.cornersAvg}/j a favor e ${d.cornersAgainstAvg}/j contra (total ${d.cornersTotalAvg}/j, +8.5 em ${d.over85Corners}% dos jogos), faltas ${d.foulsAvg}/j, cartões ${d.cardsAvg}/j (amarelos ${d.yellowsAvg}, vermelhos ${d.redsAvg}), finalizações ${d.shotsAvg}/j, no gol ${d.shotsOnTargetAvg}/j, posse ${d.possessionAvg}%.`
+        : "";
+      return `${name} — ${p.games} jogos: V${p.winPct}% E${p.drawPct}% D${p.lossPct}%, gols pró ${p.gfAvg}/j, contra ${p.gaAvg}/j, over2.5 ${p.over25}%, BTTS ${p.btts}%, sem sofrer ${p.cleanSheet}%, não marcou ${p.failedToScore}%, forma ${p.form.join("")}, ${p.streak}. Casa: V${h.winPct}% gols ${h.gfAvg}-${h.gaAvg}. Fora: V${a.winPct}% gols ${a.gfAvg}-${a.gaAvg}.${disc} Padrões: ${pats || "nenhum"}.`;
     };
     const st = standings.filter((r) => r.teamId === m.home.id || r.teamId === m.away.id).map((r) => `${r.team}: ${r.rank}º, ${r.points} pts em ${r.played}j, saldo ${r.gf - r.ga}`).join("; ");
     return [

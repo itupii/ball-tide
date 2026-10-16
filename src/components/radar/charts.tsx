@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Bar as RBar, BarChart, CartesianGrid, Legend, Line, LineChart, PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { profile, type Probabilities } from "@/lib/analytics";
+import { disciplineStats, profile, type Probabilities } from "@/lib/analytics";
 import { teamHistoryQuery } from "@/components/radar/match-extras";
 import { Section } from "@/components/radar/ui";
 
@@ -39,6 +39,19 @@ export function MatchCharts({ home, away, pr }: { home: T; away: T; pr: Probabil
     { k: "1", v: pr.home }, { k: "X", v: pr.draw }, { k: "2", v: pr.away },
     { k: "+1.5", v: pr.over["1.5"] ?? 0 }, { k: "+2.5", v: pr.over["2.5"] ?? 0 }, { k: "+3.5", v: pr.over["3.5"] ?? 0 }, { k: "BTTS", v: pr.btts },
   ];
+  const dh = disciplineStats(hg), da = disciplineStats(ag);
+  const disc = [
+    ["Escanteios/j", dh.cornersAvg, da.cornersAvg],
+    ["Esc. sofridos/j", dh.cornersAgainstAvg, da.cornersAgainstAvg],
+    ["Faltas/j", dh.foulsAvg, da.foulsAvg],
+    ["Cartões/j", dh.cardsAvg, da.cardsAvg],
+    ["Finalizações/j", dh.shotsAvg, da.shotsAvg],
+    ["Chutes no gol/j", dh.shotsOnTargetAvg, da.shotsOnTargetAvg],
+  ].map(([k, x, y]) => ({ k, [home.short]: x, [away.short]: y }));
+  const cornerTrend = Array.from({ length: n }, (_, i) => {
+    const x = hg[n - 1 - i]!, y = ag[n - 1 - i]!;
+    return { j: `J${i + 1}`, [home.short]: x.corners ?? null, [away.short]: y.corners ?? null };
+  });
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Section title="Perfil comparado (últimos 20)">
@@ -87,6 +100,40 @@ export function MatchCharts({ home, away, pr }: { home: T; away: T; pr: Probabil
           </ResponsiveContainer>
         </div>
       </Section>
+      {dh.sample > 0 && da.sample > 0 && (
+        <>
+          <Section title={`Disciplina e volume de jogo — média dos últimos ${Math.min(dh.sample, da.sample)} jogos`}>
+            <div className="h-64">
+              <ResponsiveContainer>
+                <BarChart data={disc}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+                  <XAxis dataKey="k" {...axis} />
+                  <YAxis {...axis} />
+                  <Tooltip {...tip} cursor={{ fill: "var(--surface)" }} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <RBar dataKey={home.short} fill={C1} radius={[4, 4, 0, 0]} />
+                  <RBar dataKey={away.short} fill={C2} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Section>
+          <Section title={`Escanteios a favor — últimos ${n} jogos`}>
+            <div className="h-64">
+              <ResponsiveContainer>
+                <LineChart data={cornerTrend}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+                  <XAxis dataKey="j" {...axis} />
+                  <YAxis allowDecimals={false} {...axis} />
+                  <Tooltip {...tip} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line type="monotone" dataKey={home.short} stroke={C1} strokeWidth={2} />
+                  <Line type="monotone" dataKey={away.short} stroke={C2} strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Section>
+        </>
+      )}
       <Section title="Probabilidades do modelo (%)">
         <div className="h-64">
           <ResponsiveContainer>
