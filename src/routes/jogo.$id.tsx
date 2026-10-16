@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { getMatch, type PastGame } from "@/lib/espn.functions";
 import { edge, fairOdds, findPatterns, predict, profile } from "@/lib/analytics";
 import { Bar, FormPill, LiveBadge, OddButton, Section, TeamLogo } from "@/components/radar/ui";
+import { MatchCharts } from "@/components/radar/charts";
 import { AiMatchAnalysis, AlertButton, TeamEval, teamHistoryQuery, useLiveAlerts } from "@/components/radar/match-extras";
 import { cn } from "@/lib/utils";
 import type { Selection } from "@/lib/slip";
@@ -143,6 +144,7 @@ function MatchPage() {
           <TeamEval team={m.away} />
         </div>
       )}
+      {(tab === "avaliar" || tab === "ia" || tab === "prob") && <MatchCharts home={m.home} away={m.away} pr={pr} />}
 
       {tab === "ia" && <AiMatchAnalysis buildContext={buildContext} />}
 
