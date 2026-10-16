@@ -76,7 +76,7 @@ export function AppHeader() {
   const { user } = useAuth();
   const nav = [
     { to: "/", label: "Jogos", icon: Activity },
-    { to: "/odds", label: "Odds", icon: LineChart },
+    { to: "/oportunidades", label: "Oportunidades", icon: LineChart },
     { to: "/bilhete", label: "Bilhete", icon: Ticket },
   ] as const;
   return (

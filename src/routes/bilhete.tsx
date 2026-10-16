@@ -108,7 +108,7 @@ function SlipPage() {
         <Section title={`${items.length} seleções`} right={items.length > 0 && <button onClick={clear} className="text-xs text-muted-foreground hover:text-destructive">Limpar</button>}>
           {items.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Bilhete vazio. Adicione palpites a partir de um <Link to="/" className="text-primary underline">jogo</Link> ou do <Link to="/odds" className="text-primary underline">comparador de odds</Link>.
+              Bilhete vazio. Adicione palpites a partir de um <Link to="/" className="text-primary underline">jogo</Link> ou do <Link to="/oportunidades" className="text-primary underline">oportunidades do dia</Link>.
             </p>
           ) : (
             <ul className="space-y-2">
