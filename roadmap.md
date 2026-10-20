@@ -1,0 +1,3 @@
+- [ ] Estatísticas e escalações dos jogadores na tela de cada jogo.
+- [ ] Transmissões oficiais incorporadas quando permitidas e canais alternativos.
+- [ ] Testar dados reais, controles e visualização.
