@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getScoreboard, type MatchSummary } from "@/lib/espn.functions";
-import { LiveBadge, TeamLogo } from "@/components/radar/ui";
+import { LiveBadge, TeamLogo, StatCard, Skeleton } from "@/components/radar/ui";
 import { cn } from "@/lib/utils";
 import { RefreshCw, Search } from "lucide-react";
 
@@ -10,9 +10,16 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Jogos ao vivo e placares — RadarFC" },
-      { name: "description", content: "Placares de futebol ao vivo do mundo inteiro, gols, cartões e estatísticas atualizados a cada poucos segundos." },
+      {
+        name: "description",
+        content:
+          "Placares de futebol ao vivo do mundo inteiro, gols, cartões e estatísticas atualizados a cada poucos segundos.",
+      },
       { property: "og:title", content: "Jogos ao vivo e placares — RadarFC" },
-      { property: "og:description", content: "Placares ao vivo, estatísticas e probabilidades de futebol do mundo inteiro." },
+      {
+        property: "og:description",
+        content: "Placares ao vivo, estatísticas e probabilidades de futebol do mundo inteiro.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -20,7 +27,8 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const ymd = (d: Date) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+const ymd = (d: Date) =>
+  `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 
 const scoreboardQuery = (date: string, live: boolean) =>
   queryOptions({
@@ -92,17 +100,40 @@ function Index() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-4xl font-bold uppercase tracking-wide">
-            Jogos <span className="text-primary">do dia</span>
+          <h1 className="font-display text-5xl font-bold uppercase tracking-wide">
+            Jogos <span className="text-gradient">do dia</span>
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {matches.length} partidas · {liveCount} ao vivo · atualização automática a cada {isToday ? "15" : "60"}s
+            {matches.length} partidas · {liveCount} ao vivo · atualização automática a cada{" "}
+            {isToday ? "15" : "60"}s
           </p>
         </div>
-        <button onClick={() => refetch()} className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:border-primary/60">
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:border-primary/60"
+        >
           <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} /> Atualizar
         </button>
       </div>
+
+      {matches.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <StatCard
+            index={0}
+            label="Partidas"
+            value={matches.length}
+            hint={isToday ? "hoje" : "neste dia"}
+          />
+          <StatCard index={1} label="Ao vivo" value={liveCount} hint="atualiza sozinho" />
+          <StatCard index={2} label="Campeonatos" value={groups.length} hint="com jogos no dia" />
+          <StatCard
+            index={3}
+            label="Com odds"
+            value={matches.filter((m) => m.odds?.home).length}
+            hint="mercado 1X2"
+          />
+        </div>
+      )}
 
       <div className="flex gap-2 overflow-x-auto pb-1">
         {days.map((d) => {
@@ -113,12 +144,18 @@ function Index() {
               key={k}
               onClick={() => setDate(k)}
               className={cn(
-                "flex min-w-[4.5rem] flex-col items-center rounded-md border px-3 py-2 text-xs transition-colors",
-                date === k ? "border-primary bg-primary text-primary-foreground" : "bg-card hover:border-primary/50",
+                "flex min-w-[4.5rem] flex-col items-center rounded-lg border px-3 py-2 text-xs transition-all duration-200 hover:-translate-y-0.5",
+                date === k
+                  ? "border-primary bg-primary text-primary-foreground shadow-[0_8px_24px_-8px_var(--primary)]"
+                  : "surface-card hover:border-primary/50",
               )}
             >
-              <span className="uppercase">{today ? "Hoje" : d.toLocaleDateString("pt-BR", { weekday: "short" })}</span>
-              <span className="tabular text-sm font-bold">{d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span>
+              <span className="uppercase">
+                {today ? "Hoje" : d.toLocaleDateString("pt-BR", { weekday: "short" })}
+              </span>
+              <span className="tabular text-sm font-bold">
+                {d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+              </span>
             </button>
           );
         })}
@@ -136,7 +173,12 @@ function Index() {
           <button
             key={k}
             onClick={() => setFilter(k)}
-            className={cn("rounded-full border px-3 py-1 text-sm", filter === k ? "border-primary text-primary" : "text-muted-foreground hover:text-foreground")}
+            className={cn(
+              "rounded-full border px-3 py-1 text-sm transition-all duration-200",
+              filter === k
+                ? "border-primary bg-primary/10 text-primary"
+                : "text-muted-foreground hover:border-primary/40 hover:text-foreground",
+            )}
           >
             {l}
           </button>
@@ -152,21 +194,33 @@ function Index() {
         </div>
       </div>
 
-      {data?.error && <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm">{data.error}</p>}
+      {data?.error && (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm">
+          {data.error}
+        </p>
+      )}
       {isLoading && (
         <div className="space-y-2">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-14 animate-pulse rounded-md bg-card" />
+            <Skeleton key={i} className="h-14" />
           ))}
         </div>
       )}
-      {!isLoading && groups.length === 0 && <p className="py-12 text-center text-muted-foreground">Nenhuma partida encontrada.</p>}
+      {!isLoading && groups.length === 0 && (
+        <p className="py-12 text-center text-muted-foreground">Nenhuma partida encontrada.</p>
+      )}
 
       <div className="space-y-4">
-        {groups.map(([league, ms]) => (
-          <div key={league} className="overflow-hidden rounded-lg border bg-card">
-            <div className="flex items-center justify-between border-b bg-surface px-4 py-2">
-              <h3 className="font-display text-sm font-semibold uppercase tracking-wider">{league}</h3>
+        {groups.map(([league, ms], gi) => (
+          <div
+            key={league}
+            className="surface-card reveal overflow-hidden rounded-xl"
+            style={{ ["--i" as string]: Math.min(gi, 8) }}
+          >
+            <div className="flex items-center justify-between border-b bg-surface/80 px-4 py-2">
+              <h3 className="font-display text-sm font-semibold uppercase tracking-wider">
+                {league}
+              </h3>
               <span className="text-xs text-muted-foreground">{ms.length}</span>
             </div>
             <ul className="divide-y">
@@ -186,7 +240,11 @@ function MatchRow({ m, flash }: { m: MatchSummary; flash: boolean }) {
   const reds = m.events.filter((e) => e.red).length;
   return (
     <li className={cn(flash && "flash-goal")}>
-      <Link to="/jogo/$id" params={{ id: m.id }} className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-3 px-4 py-2.5 transition-colors hover:bg-secondary/60">
+      <Link
+        to="/jogo/$id"
+        params={{ id: m.id }}
+        className="group grid grid-cols-[4.5rem_1fr_auto] items-center gap-3 border-l-2 border-transparent px-4 py-2.5 transition-all duration-200 hover:border-primary hover:bg-secondary/60"
+      >
         <div className="text-xs">
           {m.state === "in" ? (
             <LiveBadge text={m.clock || m.status} />
@@ -200,13 +258,26 @@ function MatchRow({ m, flash }: { m: MatchSummary; flash: boolean }) {
           {[m.home, m.away].map((t) => (
             <div key={t.id} className="flex items-center gap-2">
               <TeamLogo src={t.logo} alt={t.name} size={18} />
-              <span className={cn("truncate text-sm", m.state === "post" && t.winner && "font-semibold")}>{t.name}</span>
-              {t.form && <span className="hidden text-[10px] tracking-widest text-muted-foreground md:inline">{t.form}</span>}
+              <span
+                className={cn(
+                  "truncate text-sm transition-transform duration-200 group-hover:translate-x-0.5",
+                  m.state === "post" && t.winner && "font-semibold",
+                )}
+              >
+                {t.name}
+              </span>
+              {t.form && (
+                <span className="hidden text-[10px] tracking-widest text-muted-foreground md:inline">
+                  {t.form}
+                </span>
+              )}
             </div>
           ))}
         </div>
         <div className="flex items-center gap-4">
-          {reds > 0 && <span className="inline-block h-3 w-2 rounded-[1px] bg-loss" title="Cartão vermelho" />}
+          {reds > 0 && (
+            <span className="inline-block h-3 w-2 rounded-[1px] bg-loss" title="Cartão vermelho" />
+          )}
           {m.odds?.home && (
             <div className="tabular hidden text-[11px] text-muted-foreground sm:block">
               1 {m.odds.home} · X {m.odds.draw} · 2 {m.odds.away}

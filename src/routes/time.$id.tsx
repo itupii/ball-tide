@@ -4,13 +4,16 @@ import { useMemo, useState } from "react";
 import { getTeamHistory } from "@/lib/espn.functions";
 import { findPatterns, profile } from "@/lib/analytics";
 import { Bar, FormPill, Section, TeamLogo } from "@/components/radar/ui";
+import { TeamSeasonPanel } from "@/components/radar/team-season";
+import { TeamTrend } from "@/components/radar/interactive-charts";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
 
-const teamQuery = (id: string) => queryOptions({ queryKey: ["team", id], queryFn: () => getTeamHistory({ data: { teamId: id } }) });
+const teamQuery = (id: string) =>
+  queryOptions({ queryKey: ["team", id], queryFn: () => getTeamHistory({ data: { teamId: id } }) });
 
 export const Route = createFileRoute("/time/$id")({
   loader: ({ context, params }) => context.queryClient.ensureQueryData(teamQuery(params.id)),
@@ -42,7 +45,8 @@ function TeamPage() {
   const fav = useQuery({
     queryKey: ["fav", id, user?.id],
     enabled: !!user,
-    queryFn: async () => (await supabase.from("favorite_teams").select("id").eq("team_id", id).maybeSingle()).data,
+    queryFn: async () =>
+      (await supabase.from("favorite_teams").select("id").eq("team_id", id).maybeSingle()).data,
   });
   const games = useMemo(() => {
     const g = data?.games ?? [];
@@ -58,7 +62,10 @@ function TeamPage() {
       return;
     }
     if (fav.data) await supabase.from("favorite_teams").delete().eq("id", fav.data.id);
-    else await supabase.from("favorite_teams").insert({ team_id: id, team_name: data.team.name, logo: data.team.logo });
+    else
+      await supabase
+        .from("favorite_teams")
+        .insert({ team_id: id, team_name: data.team.name, logo: data.team.logo });
     qc.invalidateQueries({ queryKey: ["fav", id] });
   };
 
@@ -68,17 +75,37 @@ function TeamPage() {
         <TeamLogo src={data.team.logo} alt={data.team.name} size={72} />
         <div className="flex-1">
           <h1 className="font-display text-4xl font-bold uppercase">{data.team.name}</h1>
-          <p className="text-sm text-muted-foreground">{data.team.league} · {data.games.length} jogos analisados</p>
-          <div className="mt-2 flex gap-1">{profile(data.games).form.map((r, i) => <FormPill key={i} r={r} />)}</div>
+          <p className="text-sm text-muted-foreground">
+            {data.team.league} · {data.games.length} jogos analisados
+          </p>
+          <div className="mt-2 flex gap-1">
+            {profile(data.games).form.map((r, i) => (
+              <FormPill key={i} r={r} />
+            ))}
+          </div>
         </div>
-        <button onClick={toggleFav} className={cn("flex items-center gap-2 rounded-md border px-3 py-2 text-sm", fav.data && "border-accent text-accent")}>
-          <Star className={cn("h-4 w-4", fav.data && "fill-current")} /> {fav.data ? "Favorito" : "Favoritar"}
+        <button
+          onClick={toggleFav}
+          className={cn(
+            "flex items-center gap-2 rounded-md border px-3 py-2 text-sm",
+            fav.data && "border-accent text-accent",
+          )}
+        >
+          <Star className={cn("h-4 w-4", fav.data && "fill-current")} />{" "}
+          {fav.data ? "Favorito" : "Favoritar"}
         </button>
       </div>
 
       <div className="flex flex-wrap gap-2">
         {[5, 10, 20, 50].map((n) => (
-          <button key={n} onClick={() => setWin(n)} className={cn("rounded-full border px-3 py-1 text-sm", win === n ? "border-primary text-primary" : "text-muted-foreground")}>
+          <button
+            key={n}
+            onClick={() => setWin(n)}
+            className={cn(
+              "rounded-full border px-3 py-1 text-sm",
+              win === n ? "border-primary text-primary" : "text-muted-foreground",
+            )}
+          >
             Últimos {n}
           </button>
         ))}
@@ -90,7 +117,14 @@ function TeamPage() {
             ["away", "Fora"],
           ] as const
         ).map(([k, l]) => (
-          <button key={k} onClick={() => setVenue(k)} className={cn("rounded-full border px-3 py-1 text-sm", venue === k ? "border-primary text-primary" : "text-muted-foreground")}>
+          <button
+            key={k}
+            onClick={() => setVenue(k)}
+            className={cn(
+              "rounded-full border px-3 py-1 text-sm",
+              venue === k ? "border-primary text-primary" : "text-muted-foreground",
+            )}
+          >
             {l}
           </button>
         ))}
@@ -128,7 +162,10 @@ function TeamPage() {
                   <span>{l}</span>
                   <span className="tabular font-semibold">{v}%</span>
                 </div>
-                <Bar value={v as number} tone={(v as number) >= 70 ? "primary" : (v as number) >= 50 ? "accent" : "muted"} />
+                <Bar
+                  value={v as number}
+                  tone={(v as number) >= 70 ? "primary" : (v as number) >= 50 ? "accent" : "muted"}
+                />
               </div>
             ))}
           </div>
@@ -142,9 +179,18 @@ function TeamPage() {
                 <li key={i}>
                   <div className="flex justify-between gap-2 text-sm">
                     <span>{pt.label}</span>
-                    <span className={cn("tabular font-bold", pt.strength === "forte" ? "text-primary" : "text-accent")}>{pt.pct}%</span>
+                    <span
+                      className={cn(
+                        "tabular font-bold",
+                        pt.strength === "forte" ? "text-primary" : "text-accent",
+                      )}
+                    >
+                      {pt.pct}%
+                    </span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{pt.hits} de {pt.total} jogos · padrão {pt.strength}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {pt.hits} de {pt.total} jogos · padrão {pt.strength}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -153,15 +199,7 @@ function TeamPage() {
       </div>
 
       <Section title="Gols por jogo">
-        <div className="flex h-32 items-end gap-1">
-          {[...games].reverse().map((g) => (
-            <div key={g.id} className="flex flex-1 flex-col items-center justify-end gap-0.5" title={`${g.opponent} ${g.goalsFor}-${g.goalsAgainst}`}>
-              <div className="w-full rounded-t-sm bg-primary" style={{ height: `${g.goalsFor * 18}px` }} />
-              <div className="w-full rounded-b-sm bg-loss/70" style={{ height: `${g.goalsAgainst * 18}px` }} />
-            </div>
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">Verde: gols marcados · Vermelho: gols sofridos (mais antigo → mais recente)</p>
+        <TeamTrend games={games} />
       </Section>
 
       <Section title="Resultados">
@@ -169,15 +207,23 @@ function TeamPage() {
           {games.map((g) => (
             <li key={g.id} className="flex items-center gap-3 py-2">
               <FormPill r={g.result} />
-              <span className="tabular w-20 text-xs text-muted-foreground">{new Date(g.date).toLocaleDateString("pt-BR")}</span>
-              <span className="w-6 text-xs text-muted-foreground">{g.homeAway === "home" ? "C" : "F"}</span>
+              <span className="tabular w-20 text-xs text-muted-foreground">
+                {new Date(g.date).toLocaleDateString("pt-BR")}
+              </span>
+              <span className="w-6 text-xs text-muted-foreground">
+                {g.homeAway === "home" ? "C" : "F"}
+              </span>
               <TeamLogo src={g.opponentLogo} alt={g.opponent} size={18} />
               <span className="flex-1 truncate">{g.opponent}</span>
-              <span className="tabular font-bold">{g.goalsFor}-{g.goalsAgainst}</span>
+              <span className="tabular font-bold">
+                {g.goalsFor}-{g.goalsAgainst}
+              </span>
             </li>
           ))}
         </ul>
       </Section>
+
+      <TeamSeasonPanel teamName={data.team.name} />
     </div>
   );
 }

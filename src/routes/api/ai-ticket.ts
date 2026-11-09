@@ -49,20 +49,23 @@ export const Route = createFileRoute("/api/ai-ticket")({
         const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
         const url = process.env["SUPABASE_URL"];
         const pub = process.env["SUPABASE_PUBLISHABLE_KEY"];
-        if (!token || !url || !pub) return new Response("Entre na sua conta para usar a análise com IA.", { status: 401 });
+        if (!token || !url || !pub)
+          return new Response("Entre na sua conta para usar a análise com IA.", { status: 401 });
         const sb = createClient(url, pub, {
           auth: { persistSession: false, autoRefreshToken: false },
           global: {
             fetch: (input, init) => {
               const h = new Headers(init?.headers);
-              if (pub.startsWith("sb_") && h.get("Authorization") === `Bearer ${pub}`) h.delete("Authorization");
+              if (pub.startsWith("sb_") && h.get("Authorization") === `Bearer ${pub}`)
+                h.delete("Authorization");
               h.set("apikey", pub);
               return fetch(input, { ...init, headers: h });
             },
           },
         });
         const { data: claims, error } = await sb.auth.getClaims(token);
-        if (error || !claims?.claims?.sub) return new Response("Sessão inválida. Entre novamente.", { status: 401 });
+        if (error || !claims?.claims?.sub)
+          return new Response("Sessão inválida. Entre novamente.", { status: 401 });
 
         let body: z.infer<typeof Body>;
         try {
@@ -80,7 +83,8 @@ export const Route = createFileRoute("/api/ai-ticket")({
               `${i + 1}. ${s.match} | Mercado: ${s.market} | Palpite: ${s.pick} | Odd: ${s.odds.toFixed(2)} (implícita ${(100 / s.odds).toFixed(1)}%) | Modelo: ${s.modelPct != null ? s.modelPct + "%" : "n/d"}`,
           )
           .join("\n");
-        if (body.mode === "ticket" && body.selections.length === 0) return new Response("Bilhete vazio.", { status: 400 });
+        if (body.mode === "ticket" && body.selections.length === 0)
+          return new Response("Bilhete vazio.", { status: 400 });
         const userMsg =
           body.mode === "match"
             ? `Dados da partida:\n${body.context ?? "(nenhum)"}`
@@ -89,7 +93,11 @@ export const Route = createFileRoute("/api/ai-ticket")({
         const upstream = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
           method: "POST",
           signal: request.signal,
-          headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "fetch" },
+          headers: {
+            "Content-Type": "application/json",
+            "Lovable-API-Key": apiKey,
+            "X-Lovable-AIG-SDK": "fetch",
+          },
           body: JSON.stringify({
             model: "openai/gpt-6-astra",
             instructions: body.mode === "match" ? MATCH_SYSTEM : SYSTEM,
@@ -131,7 +139,8 @@ export const Route = createFileRoute("/api/ai-ticket")({
                   if (!payload || payload === "[DONE]") continue;
                   try {
                     const ev = JSON.parse(payload);
-                    if (ev.type === "response.output_text.delta" && ev.delta) controller.enqueue(enc.encode(ev.delta));
+                    if (ev.type === "response.output_text.delta" && ev.delta)
+                      controller.enqueue(enc.encode(ev.delta));
                     if (ev.type === "error" || ev.type === "response.failed")
                       controller.enqueue(enc.encode("\n\n_A análise foi interrompida._"));
                   } catch {

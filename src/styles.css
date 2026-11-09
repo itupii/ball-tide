@@ -142,3 +142,98 @@
 @utility flash-goal {
   animation: flash-goal 2.5s ease-out;
 }
+
+/* ===== Visual v2 (diretrizes ui-ux-pro-max: dashboard denso, hover/tooltip, stagger, reduced-motion, foco visível) ===== */
+@layer base {
+  button:not(:disabled), [role="button"], select, summary, a[href] {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  ::selection {
+    background: oklch(0.88 0.21 128 / 0.35);
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='420' height='420' viewBox='0 0 420 420' fill='none' stroke='%23b6f23a' stroke-opacity='0.045' stroke-width='1.5'><circle cx='210' cy='210' r='84'/><line x1='0' y1='210' x2='420' y2='210'/><rect x='0.75' y='0.75' width='418.5' height='418.5'/></svg>");
+    background-size: 420px 420px;
+    mask-image: radial-gradient(ellipse at 50% 0%, black 0%, transparent 75%);
+  }
+}
+
+@utility surface-card {
+  position: relative;
+  background:
+    linear-gradient(180deg, oklch(1 0 0 / 0.035), transparent 40%),
+    var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 0 oklch(1 0 0 / 0.04) inset, 0 12px 30px -18px oklch(0 0 0 / 0.6);
+  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+@utility hover-lift {
+  &:hover {
+    transform: translateY(-2px);
+    border-color: oklch(0.88 0.21 128 / 0.45);
+    box-shadow: 0 16px 40px -18px oklch(0.88 0.21 128 / 0.35);
+  }
+}
+@utility text-gradient {
+  background: linear-gradient(100deg, var(--primary), oklch(0.82 0.17 95) 55%, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@utility reveal {
+  animation: reveal-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+@utility shimmer {
+  background: linear-gradient(100deg, var(--card) 30%, oklch(0.28 0.016 160) 50%, var(--card) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@utility bar-grow {
+  transform-origin: left;
+  animation: bar-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@utility glass {
+  background: oklch(0.17 0.012 160 / 0.7);
+  backdrop-filter: blur(14px) saturate(140%);
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 oklch(0.88 0.21 128 / 0.45); }
+  100% { box-shadow: 0 0 0 14px oklch(0.88 0.21 128 / 0); }
+}
+@utility pulse-ring {
+  animation: pulse-ring 2.2s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
