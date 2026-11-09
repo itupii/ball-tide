@@ -24,7 +24,10 @@ function NotFoundComponent() {
         <h1 className="font-display text-7xl font-bold text-primary">404</h1>
         <h2 className="mt-4 text-xl font-semibold">Página não encontrada</h2>
         <div className="mt-6">
-          <Link to="/" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
             Voltar aos jogos
           </Link>
         </div>
@@ -64,7 +67,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "RadarFC — Análise de futebol ao vivo" },
-      { name: "description", content: "Placares ao vivo, estatísticas, probabilidades e bilhetes com IA." },
+      {
+        name: "description",
+        content: "Placares ao vivo, estatísticas, probabilidades e bilhetes com IA.",
+      },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },

@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BilheteRouteImport } from './routes/bilhete'
+import { Route as JogadoresRouteImport } from './routes/jogadores'
+import { Route as LigaRouteImport } from './routes/liga'
 import { Route as OportunidadesRouteImport } from './routes/oportunidades'
 import { Route as ApiAiTicketRouteImport } from './routes/api/ai-ticket'
 import { Route as JogoIdRouteImport } from './routes/jogo.$id'
@@ -30,6 +32,16 @@ const AuthRoute = AuthRouteImport.update({
 const BilheteRoute = BilheteRouteImport.update({
   id: '/bilhete',
   path: '/bilhete',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JogadoresRoute = JogadoresRouteImport.update({
+  id: '/jogadores',
+  path: '/jogadores',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LigaRoute = LigaRouteImport.update({
+  id: '/liga',
+  path: '/liga',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OportunidadesRoute = OportunidadesRouteImport.update({
@@ -57,6 +69,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/bilhete': typeof BilheteRoute
+  '/jogadores': typeof JogadoresRoute
+  '/liga': typeof LigaRoute
   '/oportunidades': typeof OportunidadesRoute
   '/api/ai-ticket': typeof ApiAiTicketRoute
   '/jogo/$id': typeof JogoIdRoute
@@ -66,6 +80,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/bilhete': typeof BilheteRoute
+  '/jogadores': typeof JogadoresRoute
+  '/liga': typeof LigaRoute
   '/oportunidades': typeof OportunidadesRoute
   '/api/ai-ticket': typeof ApiAiTicketRoute
   '/jogo/$id': typeof JogoIdRoute
@@ -76,6 +92,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/bilhete': typeof BilheteRoute
+  '/jogadores': typeof JogadoresRoute
+  '/liga': typeof LigaRoute
   '/oportunidades': typeof OportunidadesRoute
   '/api/ai-ticket': typeof ApiAiTicketRoute
   '/jogo/$id': typeof JogoIdRoute
@@ -87,6 +105,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/bilhete'
+    | '/jogadores'
+    | '/liga'
     | '/oportunidades'
     | '/api/ai-ticket'
     | '/jogo/$id'
@@ -96,6 +116,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/bilhete'
+    | '/jogadores'
+    | '/liga'
     | '/oportunidades'
     | '/api/ai-ticket'
     | '/jogo/$id'
@@ -105,6 +127,8 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/bilhete'
+    | '/jogadores'
+    | '/liga'
     | '/oportunidades'
     | '/api/ai-ticket'
     | '/jogo/$id'
@@ -115,6 +139,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   BilheteRoute: typeof BilheteRoute
+  JogadoresRoute: typeof JogadoresRoute
+  LigaRoute: typeof LigaRoute
   OportunidadesRoute: typeof OportunidadesRoute
   ApiAiTicketRoute: typeof ApiAiTicketRoute
   JogoIdRoute: typeof JogoIdRoute
@@ -142,6 +168,20 @@ declare module '@tanstack/react-router' {
       path: '/bilhete'
       fullPath: '/bilhete'
       preLoaderRoute: typeof BilheteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jogadores': {
+      id: '/jogadores'
+      path: '/jogadores'
+      fullPath: '/jogadores'
+      preLoaderRoute: typeof JogadoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/liga': {
+      id: '/liga'
+      path: '/liga'
+      fullPath: '/liga'
+      preLoaderRoute: typeof LigaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/oportunidades': {
@@ -179,6 +219,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   BilheteRoute: BilheteRoute,
+  JogadoresRoute: JogadoresRoute,
+  LigaRoute: LigaRoute,
   OportunidadesRoute: OportunidadesRoute,
   ApiAiTicketRoute: ApiAiTicketRoute,
   JogoIdRoute: JogoIdRoute,
