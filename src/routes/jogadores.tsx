@@ -124,7 +124,8 @@ function PlayersPage() {
             </table>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Fonte: Sportmonks. xG dos 15 primeiros artilheiros (requer o add-on xG).
+            Fonte: provedor configurado (football-data.org grátis ou Sportmonks). A coluna de xG só
+            aparece com a Sportmonks e o add-on xG.
           </p>
         </Section>
       )}

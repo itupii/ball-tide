@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useSlip, type Selection } from "@/lib/slip";
 import { useAuth } from "@/lib/auth";
-import { Activity, LineChart, Ticket, Trophy, User, Users } from "lucide-react";
+import { Activity, LineChart, Ticket, Trophy, User, Users, CircleDot } from "lucide-react";
 
 export function TeamLogo({
   src,
@@ -151,6 +151,7 @@ export function AppHeader() {
     { to: "/", label: "Jogos", icon: Activity },
     { to: "/liga", label: "Liga", icon: Trophy },
     { to: "/jogadores", label: "Jogadores", icon: Users },
+    { to: "/tenis", label: "Tênis", icon: CircleDot },
     { to: "/oportunidades", label: "Oportunidades", icon: LineChart },
     { to: "/bilhete", label: "Bilhete", icon: Ticket },
   ] as const;
