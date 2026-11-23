@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import {
   matchProbability,
+  rankOf,
   playerResults,
   recentForm,
   headToHead,
@@ -103,6 +104,13 @@ export function ProbBreakdown({
   nameA: string;
   nameB: string;
 }) {
+  if (prob.insufficient)
+    return (
+      <p className="text-sm text-muted-foreground">
+        Dados insuficientes: sem ranking carregado e com poucos jogos recentes para estes jogadores.
+        A estimativa aparece quando um deles tiver ranking ou histórico.
+      </p>
+    );
   return (
     <div className="space-y-3">
       <TennisProbBar a={prob.a} b={prob.b} nameA={nameA} nameB={nameB} />
@@ -156,19 +164,19 @@ function Score({ m }: { m: TennisMatch }) {
 
 export function MatchCard({
   m,
-  rankById,
+  rankMap,
   all,
   index = 0,
 }: {
   m: TennisMatch;
-  rankById: Map<string, RankEntry>;
+  rankMap: Map<string, RankEntry>;
   all: TennisMatch[];
   index?: number;
 }) {
   const [open, setOpen] = useState(false);
-  const prob = useMemo(() => matchProbability(m, rankById, all), [m, rankById, all]);
-  const ra = rankById.get(m.a.id);
-  const rb = rankById.get(m.b.id);
+  const prob = useMemo(() => matchProbability(m, rankMap, all), [m, rankMap, all]);
+  const ra = rankOf(rankMap, m.a);
+  const rb = rankOf(rankMap, m.b);
   const fa = recentForm(playerResults(all, m.a.id, m.date));
   const fb = recentForm(playerResults(all, m.b.id, m.date));
   const h2h = headToHead(
@@ -182,8 +190,11 @@ export function MatchCard({
       <PlayerLink p={p} tour={m.tour} className={cn("flex-1 text-sm", win && "font-semibold")} />
       {r && <span className="tabular text-[11px] text-muted-foreground">#{r.rank}</span>}
       {!done && (
-        <span className="tabular w-11 text-right text-sm font-semibold text-primary">
-          {pct(pr)}
+        <span
+          className="tabular w-11 text-right text-sm font-semibold text-primary"
+          title={prob.insufficient ? "Dados insuficientes para estimar" : undefined}
+        >
+          {prob.insufficient ? "n/d" : pct(pr)}
         </span>
       )}
     </div>

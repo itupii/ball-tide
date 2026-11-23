@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { getTennisHub } from "@/lib/tennis.functions";
-import type { RankEntry, Tour } from "@/lib/tennis-model";
+import { buildRankMap, type Tour } from "@/lib/tennis-model";
 import { MatchCard, PointsChart } from "@/components/radar/tennis";
 import { Section, Skeleton, StatCard, TeamLogo } from "@/components/radar/ui";
 import { cn } from "@/lib/utils";
@@ -40,10 +40,7 @@ function TennisPage() {
   });
 
   const matches = useMemo(() => data?.matches ?? [], [data]);
-  const rankById = useMemo(
-    () => new Map<string, RankEntry>((data?.rankings ?? []).map((r) => [r.id, r])),
-    [data],
-  );
+  const rankMap = useMemo(() => buildRankMap(data?.rankings ?? []), [data]);
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => new Date(Date.now() + (i - 3) * 86_400_000)),
     [],
@@ -137,6 +134,16 @@ function TennisPage() {
         <p className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">{data.error}</p>
       )}
 
+      {data && !data.rankings.length && (
+        <p
+          className="rounded-lg border border-loss/40 bg-card p-3 text-sm text-muted-foreground"
+          role="status"
+        >
+          Ranking indisponível agora: as probabilidades usam só a forma recente (e aparecem como n/d
+          quando não há dados). Tentando de novo automaticamente.
+        </p>
+      )}
+
       {view === "jogos" && data && (
         <>
           <div className="flex gap-2 overflow-x-auto pb-1">
@@ -190,7 +197,7 @@ function TennisPage() {
                 {tournament}
               </h2>
               {ms.map((m, i) => (
-                <MatchCard key={m.id} m={m} rankById={rankById} all={matches} index={gi + i} />
+                <MatchCard key={m.id} m={m} rankMap={rankMap} all={matches} index={gi + i} />
               ))}
             </section>
           ))}
@@ -203,7 +210,7 @@ function TennisPage() {
             <PointsChart rankings={data.rankings} />
           </Section>
           <Section
-            title={`Ranking ${tour.toUpperCase()}`}
+            title={`Ranking ${tour.toUpperCase()} (${data.rankings.length} jogadores)`}
             right={
               <input
                 value={q}
