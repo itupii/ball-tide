@@ -16,8 +16,6 @@ import {
 const SITE = "https://site.api.espn.com/apis/site/v2/sports/tennis";
 const WEB = "https://site.web.api.espn.com/apis/common/v3/sports/tennis";
 /** Janela de jogos carregada: dias passados (histórico/forma) e próximos (agenda). */
-const DAYS_BACK = 14;
-const DAYS_AHEAD = 3;
 
 async function getJson(url: string): Promise<any> {
   const res = await fetch(url, { headers: { accept: "application/json" } });
@@ -35,29 +33,66 @@ export interface TennisHub {
   error: string | null;
 }
 
+/** O placar de uma data devolve TODOS os jogos dos torneios em andamento nela, então amostrar a cada ~3 dias cobre a janela com menos chamadas. */
+const SAMPLE_OFFSETS = [-14, -11, -8, -5, -2, 0, 3];
+
+async function loadMatches(tour: Tour): Promise<{ matches: TennisMatch[]; ok: boolean }> {
+  return cached(
+    `tennis:matches:${tour}`,
+    10 * 60_000,
+    async () => {
+      const today = Date.now();
+      const boards = await Promise.allSettled(
+        SAMPLE_OFFSETS.map((o) =>
+          getJson(`${SITE}/${tour}/scoreboard?dates=${ymd(new Date(today + o * 86_400_000))}`),
+        ),
+      );
+      const seen = new Map<string, TennisMatch>();
+      for (const b of boards)
+        if (b.status === "fulfilled")
+          for (const m of parseScoreboard(b.value, tour)) seen.set(m.id, m);
+      return {
+        matches: [...seen.values()].sort((x, y) => Date.parse(x.date) - Date.parse(y.date)),
+        ok: boards.some((b) => b.status === "fulfilled"),
+      };
+    },
+    (v) => v.matches.length > 0,
+  );
+}
+
+/** Tenta vários endereços até obter ranking; só guarda em cache quando vier preenchido. */
+export async function loadRankings(tour: Tour): Promise<RankEntry[]> {
+  return cached(
+    `tennis:rank:${tour}`,
+    30 * 60_000,
+    async () => {
+      const urls = [
+        `${SITE}/${tour}/rankings`,
+        `https://site.web.api.espn.com/apis/site/v2/sports/tennis/${tour}/rankings?region=us&lang=en`,
+        `${SITE}/${tour}/rankings?limit=300`,
+      ];
+      for (const u of urls) {
+        try {
+          const r = parseRankings(await getJson(u));
+          if (r.length) return r;
+        } catch {
+          /* tenta o próximo endereço */
+        }
+      }
+      return [] as RankEntry[];
+    },
+    (v) => v.length > 0,
+  );
+}
+
 async function loadHub(tour: Tour): Promise<TennisHub> {
-  return cached(`tennis:hub:${tour}`, 10 * 60_000, async () => {
-    const today = Date.now();
-    const days = Array.from({ length: DAYS_BACK + DAYS_AHEAD + 1 }, (_, i) =>
-      ymd(new Date(today + (i - DAYS_BACK) * 86_400_000)),
-    );
-    const [boards, rank] = await Promise.all([
-      Promise.allSettled(days.map((d) => getJson(`${SITE}/${tour}/scoreboard?dates=${d}`))),
-      getJson(`${SITE}/${tour}/rankings`).catch(() => null),
-    ]);
-    const seen = new Map<string, TennisMatch>();
-    for (const b of boards)
-      if (b.status === "fulfilled")
-        for (const m of parseScoreboard(b.value, tour)) seen.set(m.id, m);
-    const matches = [...seen.values()].sort((x, y) => Date.parse(x.date) - Date.parse(y.date));
-    const ok = boards.some((b) => b.status === "fulfilled");
-    return {
-      matches,
-      rankings: rank ? parseRankings(rank) : [],
-      fetchedAt: new Date().toISOString(),
-      error: ok ? null : "Não foi possível carregar o tênis agora.",
-    };
-  });
+  const [m, rankings] = await Promise.all([loadMatches(tour), loadRankings(tour)]);
+  return {
+    matches: m.matches,
+    rankings,
+    fetchedAt: new Date().toISOString(),
+    error: m.ok ? null : "Não foi possível carregar o tênis agora.",
+  };
 }
 
 const hubIn = (d: unknown) => z.object({ tour: z.enum(["atp", "wta"]) }).parse(d);
@@ -65,13 +100,23 @@ const hubServer = createServerFn({ method: "GET" })
   .inputValidator(hubIn)
   .handler(({ data }) => loadHub(data.tour));
 
-/** Servidor primeiro; se a fonte bloquear o servidor, tenta do navegador (mesmo padrão das demais funções). */
+/** Servidor primeiro; o que vier vazio (jogos ou ranking) é completado direto do navegador. */
 export async function getTennisHub({ data }: { data: { tour: Tour } }): Promise<TennisHub> {
-  const r = await hubServer({ data }).catch(() => null);
-  if (r && (r.matches.length || r.rankings.length)) return r;
-  return typeof window !== "undefined"
-    ? loadHub(hubIn(data).tour)
-    : (r ?? loadHub(hubIn(data).tour));
+  const tour = hubIn(data).tour;
+  let hub = await hubServer({ data }).catch(() => null);
+  if (typeof window !== "undefined") {
+    if (!hub || !hub.matches.length) hub = await loadHub(tour);
+    else if (!hub.rankings.length)
+      hub = { ...hub, rankings: await loadRankings(tour).catch(() => []) };
+  }
+  return (
+    hub ?? {
+      matches: [],
+      rankings: [],
+      fetchedAt: new Date().toISOString(),
+      error: "Não foi possível carregar o tênis agora.",
+    }
+  );
 }
 
 export interface TennisAthlete {

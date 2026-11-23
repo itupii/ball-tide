@@ -6,6 +6,7 @@ import { findPatterns, profile } from "@/lib/analytics";
 import { Bar, FormPill, Section, TeamLogo } from "@/components/radar/ui";
 import { TeamSeasonPanel } from "@/components/radar/team-season";
 import { TeamTrend } from "@/components/radar/interactive-charts";
+import { FormHeatStrip } from "@/components/radar/heatmap";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -200,6 +201,10 @@ function TeamPage() {
 
       <Section title="Gols por jogo">
         <TeamTrend games={games} />
+      </Section>
+
+      <Section title="Forma em mapa de calor">
+        <FormHeatStrip games={games} />
       </Section>
 
       <Section title="Resultados">
