@@ -3,13 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { getTennisAthlete, getTennisHub } from "@/lib/tennis.functions";
 import {
+  buildRankMap,
   matchProbability,
   playerResults,
+  rankOf,
   recentForm,
-  type RankEntry,
   type Tour,
 } from "@/lib/tennis-model";
 import { FormChart, ProbBreakdown } from "@/components/radar/tennis";
+import { SetsHeat } from "@/components/radar/heatmap";
 import { FormPill, Section, Skeleton, StatCard, TeamLogo } from "@/components/radar/ui";
 import { cn } from "@/lib/utils";
 
@@ -47,11 +49,12 @@ function PlayerPage() {
   });
 
   const matches = useMemo(() => hub.data?.matches ?? [], [hub.data]);
-  const rankById = useMemo(
-    () => new Map<string, RankEntry>((hub.data?.rankings ?? []).map((r) => [r.id, r])),
-    [hub.data],
-  );
-  const rank = rankById.get(id);
+  const rankMap = useMemo(() => buildRankMap(hub.data?.rankings ?? []), [hub.data]);
+  const known = useMemo(() => {
+    const m = matches.find((x) => x.a.id === id || x.b.id === id);
+    return m ? (m.a.id === id ? m.a : m.b) : null;
+  }, [matches, id]);
+  const rank = rankMap.get(id) ?? (known ? rankOf(rankMap, known) : undefined);
   const results = useMemo(() => playerResults(matches, id), [matches, id]);
   const form = recentForm(results, 10);
   const next = useMemo(
@@ -75,7 +78,7 @@ function PlayerPage() {
   });
   const wins = results.filter((r) => r.won).length;
   const p = ath.data?.profile;
-  const prob = next ? matchProbability(next, rankById, matches) : null;
+  const prob = next ? matchProbability(next, rankMap, matches) : null;
   const isA = next?.a.id === id;
   const opp = next ? (isA ? next.b : next.a) : null;
   const myProb = prob ? (isA ? prob.a : prob.b) : null;
@@ -185,6 +188,19 @@ function PlayerPage() {
         )}
       </Section>
 
+      {results.length > 0 && (
+        <Section title="Mapa de calor das partidas">
+          <SetsHeat
+            rows={results.slice(0, 12).map((r) => ({
+              label: `vs ${r.opponent.name}`,
+              sub: `${new Date(r.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} · ${r.tournament}`,
+              sets: r.sets,
+              won: r.won,
+            }))}
+          />
+        </Section>
+      )}
+
       <Section title="Histórico recente">
         {results.length ? (
           <div className="overflow-x-auto">
@@ -220,9 +236,9 @@ function PlayerPage() {
                       >
                         {r.opponent.name}
                       </Link>
-                      {rankById.get(r.opponent.id) && (
+                      {rankOf(rankMap, r.opponent) && (
                         <span className="tabular ml-1 text-xs text-muted-foreground">
-                          #{rankById.get(r.opponent.id)!.rank}
+                          #{rankOf(rankMap, r.opponent)!.rank}
                         </span>
                       )}
                     </td>

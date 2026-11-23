@@ -49,7 +49,7 @@ export interface AthleteProfile {
 const player = (x: any): TennisPlayerRef => {
   const at = x.athlete ?? {};
   const name = String(at.displayName ?? at.fullName ?? at.shortName ?? "—");
-  const seed = Number(x.seed?.displayValue ?? x.seed);
+  const seed = Number(x.curatedRank?.current ?? x.seed?.displayValue ?? x.seed);
   return {
     id: String(at.id ?? x.id ?? name),
     name,
@@ -103,19 +103,53 @@ export function parseScoreboard(json: any, tour: Tour): TennisMatch[] {
   return out;
 }
 
+const idFromRef = (ref: unknown) =>
+  typeof ref === "string" ? ref.match(/athletes\/(\d+)/)?.[1] : undefined;
+
 export function parseRankings(json: any): RankEntry[] {
-  const ranks: any[] = json?.rankings?.[0]?.ranks ?? json?.ranks ?? [];
+  const groups: any[] = json?.rankings ?? [];
+  const ranks: any[] = groups.find((g) => (g?.ranks ?? []).length)?.ranks ?? json?.ranks ?? [];
   return ranks
-    .map((r) => ({
-      id: String(r.athlete?.id ?? ""),
-      name: String(r.athlete?.displayName ?? r.athlete?.fullName ?? "—"),
-      flag: r.athlete?.flag?.href ?? null,
-      rank: Number(r.current),
-      previous: Number(r.previous ?? r.current),
-      points: Number(r.points ?? 0),
-      trend: String(r.trend ?? ""),
-    }))
-    .filter((r) => r.id && Number.isFinite(r.rank));
+    .map((r) => {
+      const at = r.athlete ?? {};
+      const name = String(at.displayName ?? at.fullName ?? at.shortName ?? "—");
+      return {
+        id: String(at.id ?? idFromRef(at.$ref) ?? ""),
+        name,
+        flag: at.flag?.href ?? null,
+        rank: Number(r.current ?? r.rank),
+        previous: Number(r.previous ?? r.current ?? r.rank),
+        points: Number(r.points ?? 0),
+        trend: String(r.trend ?? ""),
+      };
+    })
+    .filter((r) => (r.id || r.name !== "—") && Number.isFinite(r.rank));
+}
+
+const norm = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/** Índice por id e por nome normalizado: o id do ranking nem sempre coincide com o do placar. */
+export function buildRankMap(rankings: RankEntry[]): Map<string, RankEntry> {
+  const m = new Map<string, RankEntry>();
+  for (const r of rankings) {
+    if (r.id) m.set(r.id, r);
+    m.set(`n:${norm(r.name)}`, r);
+  }
+  return m;
+}
+
+export function rankOf(
+  map: Map<string, RankEntry>,
+  p: { id: string; name: string },
+): RankEntry | undefined {
+  return map.get(p.id) ?? map.get(`n:${norm(p.name)}`);
 }
 
 export function parseAthleteProfile(json: any): AthleteProfile {
@@ -161,6 +195,7 @@ export interface PlayerResult {
   gamesAgainst: number;
   setsFor: number;
   setsAgainst: number;
+  sets: { mine: number; theirs: number }[];
 }
 
 const scoreText = (mine: number[], theirs: number[]) =>
@@ -191,6 +226,7 @@ export function playerResults(matches: TennisMatch[], id: string, before?: strin
       gamesAgainst: sum(theirs),
       setsFor: setsWon(mine, theirs),
       setsAgainst: setsWon(theirs, mine),
+      sets: mine.map((g, i) => ({ mine: g, theirs: theirs[i] ?? 0 })),
     });
   }
   return res.sort((x, y) => Date.parse(y.date) - Date.parse(x.date));
@@ -225,6 +261,8 @@ export interface Prob {
   a: number;
   b: number;
   confidence: "alta" | "média" | "baixa";
+  /** sem ranking nem forma suficientes para estimar (a UI mostra "dados insuficientes" em vez de 50%) */
+  insufficient: boolean;
   /** efeito de cada fator em pontos percentuais a favor do jogador A (negativo favorece B) */
   factors: { label: string; pp: number }[];
 }
@@ -260,6 +298,7 @@ export function winProbability(
   return {
     a: p,
     b: 1 - p,
+    insufficient: a.points == null && b.points == null && a.formN < 3 && b.formN < 3,
     confidence:
       ranked && enough ? "alta" : ranked && a.formN >= 3 && b.formN >= 3 ? "média" : "baixa",
     factors: [
@@ -272,23 +311,22 @@ export function winProbability(
 
 export function matchProbability(
   m: TennisMatch,
-  rankById: Map<string, RankEntry>,
+  rankMap: Map<string, RankEntry>,
   all: TennisMatch[],
 ): Prob {
-  const side = (id: string): Side => {
-    const f = recentForm(playerResults(all, id, m.date), 10);
-    const r = rankById.get(id);
-    return { points: r?.points ?? null, rank: r?.rank ?? null, formRate: f.rate, formN: f.n };
+  const side = (p: TennisPlayerRef): Side => {
+    const f = recentForm(playerResults(all, p.id, m.date), 10);
+    const r = rankOf(rankMap, p);
+    return {
+      points: r && r.points > 0 ? r.points : null,
+      rank: r?.rank ?? null,
+      formRate: f.rate,
+      formN: f.n,
+    };
   };
-  const floor = Math.max(Math.min(...[...rankById.values()].map((r) => r.points), 100) * 0.8, 1);
-  return winProbability(
-    side(m.a.id),
-    side(m.b.id),
-    headToHead(
-      all.filter((x) => Date.parse(x.date) < Date.parse(m.date)),
-      m.a.id,
-      m.b.id,
-    ),
-    floor,
-  );
+  const pts = [...rankMap.values()].map((r) => r.points).filter((x) => x > 0);
+  // jogador fora do ranking carregado (ex.: fora do top 150): assume 80% do menor valor conhecido
+  const floor = Math.max((pts.length ? Math.min(...pts) : 100) * 0.8, 1);
+  const before = all.filter((x) => Date.parse(x.date) < Date.parse(m.date));
+  return winProbability(side(m.a), side(m.b), headToHead(before, m.a.id, m.b.id), floor);
 }

@@ -7,6 +7,7 @@ import { Bar, FormPill, LiveBadge, OddButton, Section, TeamLogo } from "@/compon
 import { MatchCharts } from "@/components/radar/charts";
 import { Lineups } from "@/components/radar/lineups";
 import { WinProbBar } from "@/components/radar/interactive-charts";
+import { ActivityHeatmap } from "@/components/radar/heatmap";
 import { ShotMap } from "@/components/radar/pitch";
 import { MatchXgPanel } from "@/components/radar/match-xg";
 import {
@@ -70,6 +71,7 @@ type Tab =
   | "ia"
   | "escalacoes"
   | "mapas"
+  | "atividade"
   | "xg";
 
 function MatchPage() {
@@ -79,7 +81,17 @@ function MatchPage() {
   const [tab, setTab] = useState<Tab>("prob");
   const alerts = useLiveAlerts(data?.match);
   if (!data) return null;
-  const { match: m, stats, homeLast, awayLast, h2h, standings, lineups, pitchEvents } = data;
+  const {
+    match: m,
+    stats,
+    homeLast,
+    awayLast,
+    h2h,
+    standings,
+    lineups,
+    pitchEvents,
+    activity,
+  } = data;
   const hp = profile(homeLast);
   const ap = profile(awayLast);
   const pr = predict(hp, ap);
@@ -217,6 +229,7 @@ function MatchPage() {
             ["ia", "Análise IA"],
             ["stats", "Estatísticas"],
             ["escalacoes", "Escalações"],
+            ["atividade", "Atividade"],
             ["mapas", "Mapas"],
             ["xg", "xG"],
             ["resumo", "Lances"],
@@ -256,6 +269,12 @@ function MatchPage() {
       {tab === "escalacoes" && <Lineups lineups={lineups} teams={[m.home, m.away]} />}
 
       {tab === "xg" && <MatchXgPanel match={m} />}
+
+      {tab === "atividade" && (
+        <Section title="Mapa de calor da atividade do jogo">
+          <ActivityHeatmap activity={activity} home={m.home} away={m.away} />
+        </Section>
+      )}
 
       {tab === "mapas" && (
         <Section title="Mapa de finalizações">

@@ -1,3 +1,4 @@
+import { parseActivity } from "./activity";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
@@ -473,6 +474,11 @@ async function loadMatch(data: { id: string }) {
     standings,
     lineups: parseLineups(s),
     pitchEvents: parsePitchEvents(s),
+    activity: parseActivity(
+      s,
+      { id: base.home.id, name: base.home.name },
+      { id: base.away.id, name: base.away.name },
+    ),
     fetchedAt: new Date().toISOString(),
   };
 }
