@@ -17,7 +17,9 @@ import { Route as LigaRouteImport } from './routes/liga'
 import { Route as OportunidadesRouteImport } from './routes/oportunidades'
 import { Route as ApiAiTicketRouteImport } from './routes/api/ai-ticket'
 import { Route as JogoIdRouteImport } from './routes/jogo.$id'
+import { Route as TenisIndexRouteImport } from './routes/tenis/index'
 import { Route as TimeIdRouteImport } from './routes/time.$id'
+import { Route as TenisJogadorIdRouteImport } from './routes/tenis/jogador.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -59,9 +61,19 @@ const JogoIdRoute = JogoIdRouteImport.update({
   path: '/jogo/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TenisIndexRoute = TenisIndexRouteImport.update({
+  id: '/tenis/',
+  path: '/tenis/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TimeIdRoute = TimeIdRouteImport.update({
   id: '/time/$id',
   path: '/time/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenisJogadorIdRoute = TenisJogadorIdRouteImport.update({
+  id: '/tenis/jogador/$id',
+  path: '/tenis/jogador/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -75,6 +87,8 @@ export interface FileRoutesByFullPath {
   '/api/ai-ticket': typeof ApiAiTicketRoute
   '/jogo/$id': typeof JogoIdRoute
   '/time/$id': typeof TimeIdRoute
+  '/tenis/': typeof TenisIndexRoute
+  '/tenis/jogador/$id': typeof TenisJogadorIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +100,8 @@ export interface FileRoutesByTo {
   '/api/ai-ticket': typeof ApiAiTicketRoute
   '/jogo/$id': typeof JogoIdRoute
   '/time/$id': typeof TimeIdRoute
+  '/tenis': typeof TenisIndexRoute
+  '/tenis/jogador/$id': typeof TenisJogadorIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +114,8 @@ export interface FileRoutesById {
   '/api/ai-ticket': typeof ApiAiTicketRoute
   '/jogo/$id': typeof JogoIdRoute
   '/time/$id': typeof TimeIdRoute
+  '/tenis/': typeof TenisIndexRoute
+  '/tenis/jogador/$id': typeof TenisJogadorIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +129,8 @@ export interface FileRouteTypes {
     | '/api/ai-ticket'
     | '/jogo/$id'
     | '/time/$id'
+    | '/tenis/'
+    | '/tenis/jogador/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +142,8 @@ export interface FileRouteTypes {
     | '/api/ai-ticket'
     | '/jogo/$id'
     | '/time/$id'
+    | '/tenis'
+    | '/tenis/jogador/$id'
   id:
     | '__root__'
     | '/'
@@ -133,6 +155,8 @@ export interface FileRouteTypes {
     | '/api/ai-ticket'
     | '/jogo/$id'
     | '/time/$id'
+    | '/tenis/'
+    | '/tenis/jogador/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -145,6 +169,8 @@ export interface RootRouteChildren {
   ApiAiTicketRoute: typeof ApiAiTicketRoute
   JogoIdRoute: typeof JogoIdRoute
   TimeIdRoute: typeof TimeIdRoute
+  TenisIndexRoute: typeof TenisIndexRoute
+  TenisJogadorIdRoute: typeof TenisJogadorIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -205,11 +231,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JogoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tenis/': {
+      id: '/tenis/'
+      path: '/tenis'
+      fullPath: '/tenis/'
+      preLoaderRoute: typeof TenisIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/time/$id': {
       id: '/time/$id'
       path: '/time/$id'
       fullPath: '/time/$id'
       preLoaderRoute: typeof TimeIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tenis/jogador/$id': {
+      id: '/tenis/jogador/$id'
+      path: '/tenis/jogador/$id'
+      fullPath: '/tenis/jogador/$id'
+      preLoaderRoute: typeof TenisJogadorIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -225,6 +265,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiTicketRoute: ApiAiTicketRoute,
   JogoIdRoute: JogoIdRoute,
   TimeIdRoute: TimeIdRoute,
+  TenisIndexRoute: TenisIndexRoute,
+  TenisJogadorIdRoute: TenisJogadorIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -9,6 +9,7 @@ import type {
   TeamSeasonStat,
   TeamXpts,
 } from "./types";
+import { cached } from "./cache";
 import { sameTeam } from "./names";
 
 const BASE = "https://api.sportmonks.com/v3/football";
@@ -170,15 +171,6 @@ export function parseTeamStats(json: any): TeamSeasonStat[] {
       } as TeamSeasonStat;
     })
     .filter((s) => s.value !== null);
-}
-
-const memo = new Map<string, { t: number; v: any }>();
-async function cached<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
-  const hit = memo.get(key);
-  if (hit && Date.now() - hit.t < ttlMs) return hit.v as T;
-  const v = await fn();
-  memo.set(key, { t: Date.now(), v });
-  return v;
 }
 
 /* ---------- chamadas ---------- */

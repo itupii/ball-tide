@@ -15,7 +15,7 @@ export type Capability =
   | "passEvents";
 
 export interface ProviderInfo {
-  id: "espn" | "sportmonks" | "opta";
+  id: "espn" | "sportmonks" | "footballdata" | "opta";
   label: string;
   capabilities: Capability[];
   /** true quando as credenciais necessárias estão configuradas no servidor */
