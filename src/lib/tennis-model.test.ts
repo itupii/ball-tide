@@ -202,3 +202,84 @@ describe("ranking robusto e dados insuficientes", () => {
     expect(matchProbability(pre, map, [pre]).a).toBeLessThan(0.3);
   });
 });
+
+import { surfaceRecord, type PlayerResult } from "./tennis-model";
+
+describe("piso da quadra no modelo", () => {
+  const base: Side = { points: 4000, rank: null, formRate: 0.5, formN: 10 };
+  it("favorece quem tem melhor retrospecto no piso (mesmo com ranking igual)", () => {
+    const p = winProbability(base, base, { a: 0, b: 0 }, 100, {
+      surface: "clay",
+      a: { wins: 18, games: 20, overall: 0.6 },
+      b: { wins: 5, games: 20, overall: 0.6 },
+    });
+    expect(p.a).toBeGreaterThan(0.6);
+    expect(p.factors.map((f) => f.label)).toContain("Piso (saibro)");
+  });
+  it("poucos jogos no piso pesam pouco (encolhe para a média geral)", () => {
+    const few = winProbability(base, base, { a: 0, b: 0 }, 100, {
+      surface: "grass",
+      a: { wins: 2, games: 2, overall: 0.5 },
+      b: { wins: 0, games: 2, overall: 0.5 },
+    });
+    const many = winProbability(base, base, { a: 0, b: 0 }, 100, {
+      surface: "grass",
+      a: { wins: 20, games: 20, overall: 0.5 },
+      b: { wins: 0, games: 20, overall: 0.5 },
+    });
+    expect(few.a).toBeLessThan(many.a);
+    expect(few.a).toBeGreaterThan(0.5);
+  });
+  it("sem piso conhecido não há fator de piso", () => {
+    expect(winProbability(base, base, { a: 0, b: 0 }).factors).toHaveLength(3);
+  });
+  it("surfaceRecord filtra por piso", () => {
+    const r = (surface: PlayerResult["surface"], won: boolean): PlayerResult => ({
+      matchId: "x",
+      date: "",
+      tournament: "",
+      surface,
+      round: "",
+      opponent: { id: "1", name: "", shortName: "", flag: null, seed: null },
+      won,
+      score: "",
+      gamesFor: 12,
+      gamesAgainst: 8,
+      setsFor: 2,
+      setsAgainst: 0,
+      sets: [],
+    });
+    const rs = [r("clay", true), r("clay", false), r("hard", true), r(null, true)];
+    expect(surfaceRecord(rs, "clay")).toMatchObject({ n: 2, w: 1, l: 1, rate: 0.5 });
+    expect(surfaceRecord(rs, null).n).toBe(4);
+    expect(surfaceRecord(rs, "grass")).toMatchObject({ n: 0, rate: null });
+  });
+  it("o parser marca piso e categoria pelo nome do torneio", () => {
+    const m = parseScoreboard(
+      {
+        events: [
+          {
+            id: "1",
+            name: "Rolex Paris Masters",
+            groupings: [
+              {
+                grouping: { displayName: "Men's Singles" },
+                competitions: [
+                  {
+                    id: "c",
+                    competitors: [
+                      { order: 1, athlete: { id: "1", displayName: "A" } },
+                      { order: 2, athlete: { id: "2", displayName: "B" } },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      "atp",
+    );
+    expect(m[0]).toMatchObject({ surface: "hard", indoor: true, category: "masters" });
+  });
+});

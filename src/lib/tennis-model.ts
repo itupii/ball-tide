@@ -1,4 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import {
+  shrunkRate,
+  SURFACE_PT,
+  tournamentInfo,
+  type Category,
+  type Surface,
+} from "./tennis-surface";
+
 export type Tour = "atp" | "wta";
 
 export interface TennisPlayerRef {
@@ -15,6 +23,9 @@ export interface TennisMatch {
   date: string;
   tournament: string;
   tournamentId: string;
+  surface: Surface | null;
+  indoor: boolean;
+  category: Category;
   round: string;
   group: string;
   state: "pre" | "in" | "post";
@@ -88,6 +99,7 @@ export function parseScoreboard(json: any, tour: Tour): TennisMatch[] {
         date: String(c.date ?? c.startDate ?? ev.date ?? ""),
         tournament: String(ev.name ?? ev.shortName ?? "Torneio"),
         tournamentId: String(ev.id ?? ""),
+        ...tournamentInfo(String(ev.name ?? ""), tour),
         round: String(c.round?.displayName ?? c.round?.name ?? ""),
         group,
         state,
@@ -187,6 +199,7 @@ export interface PlayerResult {
   matchId: string;
   date: string;
   tournament: string;
+  surface: Surface | null;
   round: string;
   opponent: TennisPlayerRef;
   won: boolean;
@@ -218,6 +231,7 @@ export function playerResults(matches: TennisMatch[], id: string, before?: strin
       matchId: m.id,
       date: m.date,
       tournament: m.tournament,
+      surface: m.surface,
       round: m.round,
       opponent: isA ? m.b : m.a,
       won: (m.winner === "a") === isA,
@@ -267,6 +281,7 @@ export interface Prob {
   factors: { label: string; pp: number }[];
 }
 
+const SURF_W = 1.4; // peso da diferença de aproveitamento no piso (taxas já encolhidas)
 const K = 0.85; // sensibilidade à razão de pontos de ranking (ln)
 const FORM_W = 0.9; // peso da diferença de aproveitamento recente
 const H2H_W = 0.15; // peso por vitória de vantagem no confronto direto (limitado a ±3)
@@ -278,11 +293,24 @@ const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x
  * logit = K·ln(pontosA/pontosB) + peso·(formaA − formaB) + peso·(H2H A − H2H B).
  * Sem ranking, usa `floorPoints` (jogador fora do top ranking) e reduz a confiança.
  */
+export interface SurfaceSide {
+  wins: number;
+  games: number;
+  /** aproveitamento geral do jogador no histórico carregado (para encolher o piso quando há poucos jogos) */
+  overall: number | null;
+}
+export interface SurfaceInput {
+  surface: Surface;
+  a: SurfaceSide;
+  b: SurfaceSide;
+}
+
 export function winProbability(
   a: Side,
   b: Side,
   h2h: { a: number; b: number },
   floorPoints = 100,
+  surf?: SurfaceInput,
 ): Prob {
   const pa = Math.max(a.points ?? floorPoints, 1);
   const pb = Math.max(b.points ?? floorPoints, 1);
@@ -291,21 +319,53 @@ export function winProbability(
   const z0 = K * (Math.log(pa) - Math.log(pb));
   const z1 = z0 + FORM_W * (fa - fb);
   const z2 = z1 + H2H_W * clamp(h2h.a - h2h.b, -3, 3);
-  const p = clamp(sig(z2), 0.03, 0.97);
+  const sa = surf ? shrunkRate(surf.a.wins, surf.a.games, surf.a.overall) : 0.5;
+  const sb = surf ? shrunkRate(surf.b.wins, surf.b.games, surf.b.overall) : 0.5;
+  const z3 = z2 + (surf ? SURF_W * (sa - sb) : 0);
+  const p = clamp(sig(z3), 0.03, 0.97);
   const pp = (x: number) => +(x * 100).toFixed(1);
   const ranked = a.points != null && b.points != null;
   const enough = a.formN >= 5 && b.formN >= 5;
+  const surfEnough = !surf || (surf.a.games >= 5 && surf.b.games >= 5);
+  const factors = [
+    { label: "Ranking (pontos)", pp: pp(sig(z0) - 0.5) },
+    { label: "Forma recente", pp: pp(sig(z1) - sig(z0)) },
+    { label: "Confronto direto", pp: pp(sig(z2) - sig(z1)) },
+  ];
+  if (surf)
+    factors.push({
+      label: `Piso (${SURFACE_PT[surf.surface].toLowerCase()})`,
+      pp: pp(sig(z3) - sig(z2)),
+    });
   return {
     a: p,
     b: 1 - p,
     insufficient: a.points == null && b.points == null && a.formN < 3 && b.formN < 3,
     confidence:
-      ranked && enough ? "alta" : ranked && a.formN >= 3 && b.formN >= 3 ? "média" : "baixa",
-    factors: [
-      { label: "Ranking (pontos)", pp: pp(sig(z0) - 0.5) },
-      { label: "Forma recente", pp: pp(sig(z1) - sig(z0)) },
-      { label: "Confronto direto", pp: pp(sig(z2) - sig(z1)) },
-    ],
+      ranked && enough && surfEnough
+        ? "alta"
+        : ranked && a.formN >= 3 && b.formN >= 3
+          ? "média"
+          : "baixa",
+    factors,
+  };
+}
+
+/** Retrospecto de um jogador num piso (ou geral, quando `surface` é null). */
+export function surfaceRecord(results: PlayerResult[], surface: Surface | null) {
+  const rs = surface ? results.filter((r) => r.surface === surface) : results;
+  const w = rs.filter((r) => r.won).length;
+  const sf = rs.reduce((s, r) => s + r.setsFor, 0);
+  const sa = rs.reduce((s, r) => s + r.setsAgainst, 0);
+  const gf = rs.reduce((s, r) => s + r.gamesFor, 0);
+  const ga = rs.reduce((s, r) => s + r.gamesAgainst, 0);
+  return {
+    n: rs.length,
+    w,
+    l: rs.length - w,
+    rate: rs.length ? w / rs.length : null,
+    setRate: sf + sa ? sf / (sf + sa) : null,
+    gameRate: gf + ga ? gf / (gf + ga) : null,
   };
 }
 
@@ -328,5 +388,16 @@ export function matchProbability(
   // jogador fora do ranking carregado (ex.: fora do top 150): assume 80% do menor valor conhecido
   const floor = Math.max((pts.length ? Math.min(...pts) : 100) * 0.8, 1);
   const before = all.filter((x) => Date.parse(x.date) < Date.parse(m.date));
-  return winProbability(side(m.a), side(m.b), headToHead(before, m.a.id, m.b.id), floor);
+  const surf = (p: TennisPlayerRef): SurfaceSide => {
+    const rs = playerResults(all, p.id, m.date);
+    const sr = surfaceRecord(rs, m.surface);
+    return { wins: sr.w, games: sr.n, overall: surfaceRecord(rs, null).rate };
+  };
+  return winProbability(
+    side(m.a),
+    side(m.b),
+    headToHead(before, m.a.id, m.b.id),
+    floor,
+    m.surface ? { surface: m.surface, a: surf(m.a), b: surf(m.b) } : undefined,
+  );
 }

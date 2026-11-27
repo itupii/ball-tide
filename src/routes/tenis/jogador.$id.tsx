@@ -1,16 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { getTennisAthlete, getTennisHub } from "@/lib/tennis.functions";
-import {
-  buildRankMap,
-  matchProbability,
-  playerResults,
-  rankOf,
-  recentForm,
-  type Tour,
-} from "@/lib/tennis-model";
-import { FormChart, ProbBreakdown } from "@/components/radar/tennis";
+import { getTennisAthlete } from "@/lib/tennis.functions";
+import { useTennisData } from "@/components/radar/use-tennis";
+import { matchProbability, playerResults, rankOf, recentForm, type Tour } from "@/lib/tennis-model";
+import { FormChart, ProbBreakdown, SurfaceBadge, SurfaceTable } from "@/components/radar/tennis";
 import { SetsHeat } from "@/components/radar/heatmap";
 import { FormPill, Section, Skeleton, StatCard, TeamLogo } from "@/components/radar/ui";
 import { cn } from "@/lib/utils";
@@ -37,25 +31,22 @@ export const Route = createFileRoute("/tenis/jogador/$id")({
 function PlayerPage() {
   const { id } = Route.useParams();
   const { tour } = Route.useSearch();
-  const hub = useQuery({
-    queryKey: ["tennis-hub", tour],
-    queryFn: () => getTennisHub({ data: { tour } }),
-    staleTime: 30_000,
-  });
+  const hub = useTennisData(tour, id);
   const ath = useQuery({
     queryKey: ["tennis-athlete", tour, id],
     queryFn: () => getTennisAthlete({ data: { tour, id } }),
     staleTime: 10 * 60_000,
   });
 
-  const matches = useMemo(() => hub.data?.matches ?? [], [hub.data]);
-  const rankMap = useMemo(() => buildRankMap(hub.data?.rankings ?? []), [hub.data]);
+  const matches = hub.matches;
+  const all = hub.all;
+  const rankMap = hub.rankMap;
   const known = useMemo(() => {
     const m = matches.find((x) => x.a.id === id || x.b.id === id);
     return m ? (m.a.id === id ? m.a : m.b) : null;
   }, [matches, id]);
   const rank = rankMap.get(id) ?? (known ? rankOf(rankMap, known) : undefined);
-  const results = useMemo(() => playerResults(matches, id), [matches, id]);
+  const results = useMemo(() => playerResults(all, id), [all, id]);
   const form = recentForm(results, 10);
   const next = useMemo(
     () => matches.find((m) => m.state !== "post" && (m.a.id === id || m.b.id === id)),
@@ -78,7 +69,7 @@ function PlayerPage() {
   });
   const wins = results.filter((r) => r.won).length;
   const p = ath.data?.profile;
-  const prob = next ? matchProbability(next, rankMap, matches) : null;
+  const prob = next ? matchProbability(next, rankMap, all) : null;
   const isA = next?.a.id === id;
   const opp = next ? (isA ? next.b : next.a) : null;
   const myProb = prob ? (isA ? prob.a : prob.b) : null;
@@ -105,7 +96,7 @@ function PlayerPage() {
 
       {hub.isLoading && <Skeleton className="h-24" />}
 
-      {hub.data && (
+      {!hub.isLoading && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatCard
             index={0}
@@ -117,7 +108,7 @@ function PlayerPage() {
             index={1}
             label="Vitórias–derrotas"
             value={wins}
-            hint={`${results.length - wins} derrotas nos últimos 14 dias`}
+            hint={`${results.length - wins} derrotas no histórico carregado`}
           />
           <StatCard
             index={2}
@@ -140,8 +131,9 @@ function PlayerPage() {
         <Section
           title="Próximo jogo e probabilidade"
           right={
-            <span className="text-xs text-muted-foreground">
-              {next.tournament} · {next.round}
+            <span className="flex items-center gap-2 text-xs text-muted-foreground">
+              {next.tournament} · {next.round}{" "}
+              <SurfaceBadge surface={next.surface} indoor={next.indoor} />
             </span>
           }
         >
@@ -183,7 +175,7 @@ function PlayerPage() {
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Sem jogos encerrados nos últimos 14 dias para este jogador.
+            Sem jogos encerrados no histórico carregado para este jogador.
           </p>
         )}
       </Section>
@@ -200,6 +192,19 @@ function PlayerPage() {
           />
         </Section>
       )}
+
+      <Section title="Desempenho por piso">
+        {results.length ? (
+          <SurfaceTable results={results} />
+        ) : (
+          <p className="text-sm text-muted-foreground">Sem jogos no histórico carregado.</p>
+        )}
+        <p className="mt-3 text-xs text-muted-foreground">
+          Histórico de ~6 meses do circuito (ESPN); o piso de cada torneio vem de uma tabela curada
+          e jogos de torneios não reconhecidos não entram nas colunas por piso.{" "}
+          {hub.historyLoading ? "Carregando histórico…" : `${results.length} jogos considerados.`}
+        </p>
+      </Section>
 
       <Section title="Histórico recente">
         {results.length ? (

@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import {
+  surfaceRecord,
   matchProbability,
   rankOf,
   playerResults,
@@ -25,6 +26,7 @@ import {
 } from "@/lib/tennis-model";
 import { TeamLogo } from "@/components/radar/ui";
 import { SetsHeat } from "@/components/radar/heatmap";
+import { CATEGORY_PT, SURFACE_PT, type Category, type Surface } from "@/lib/tennis-surface";
 import { cn } from "@/lib/utils";
 
 const axis = { stroke: "var(--muted-foreground)", fontSize: 11, tickLine: false } as const;
@@ -89,6 +91,11 @@ export function TennisProbBar({
     </div>
   );
 }
+
+const surfText = (rs: PlayerResult[], surface: Surface) => {
+  const r = surfaceRecord(rs, surface);
+  return r.n ? `${r.w}V-${r.l}D` : "—";
+};
 
 const CONF: Record<Prob["confidence"], string> = {
   alta: "text-win",
@@ -259,6 +266,15 @@ export function MatchCard({
                   fa.n ? `${fa.wins}V-${fa.n - fa.wins}D` : "—",
                   fb.n ? `${fb.wins}V-${fb.n - fb.wins}D` : "—",
                 ],
+                ...(m.surface
+                  ? [
+                      [
+                        `No ${SURFACE_PT[m.surface].toLowerCase()}`,
+                        surfText(playerResults(all, m.a.id, m.date), m.surface),
+                        surfText(playerResults(all, m.b.id, m.date), m.surface),
+                      ],
+                    ]
+                  : []),
                 ["Confronto direto", h2h.a, h2h.b],
               ].map(([l, x, y]) => (
                 <tr key={String(l)} className="border-t">
@@ -381,6 +397,94 @@ export function FormChart({ results }: { results: PlayerResult[] }) {
           </RBar>
         </BarChart>
       </ResponsiveContainer>
+    </div>
+  );
+}
+
+const SURF_STYLE: Record<Surface, string> = {
+  hard: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+  clay: "bg-orange-500/15 text-orange-300 border-orange-500/30",
+  grass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+};
+
+export function SurfaceBadge({ surface, indoor }: { surface: Surface | null; indoor?: boolean }) {
+  if (!surface)
+    return (
+      <span className="rounded-full border px-2 py-0.5 text-[10px] uppercase text-muted-foreground">
+        piso n/d
+      </span>
+    );
+  return (
+    <span
+      className={cn(
+        "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
+        SURF_STYLE[surface],
+      )}
+    >
+      {SURFACE_PT[surface]}
+      {indoor ? " · coberta" : ""}
+    </span>
+  );
+}
+
+export function CategoryBadge({ category }: { category: Category }) {
+  if (category === "other") return null;
+  return (
+    <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+      {CATEGORY_PT[category]}
+    </span>
+  );
+}
+
+/** Retrospecto por piso (mapa de calor da taxa de vitórias) de um jogador. */
+export function SurfaceTable({ results }: { results: PlayerResult[] }) {
+  const rows: { key: string; label: string; surface: Surface | null }[] = [
+    { key: "all", label: "Geral", surface: null },
+    { key: "hard", label: SURFACE_PT.hard, surface: "hard" },
+    { key: "clay", label: SURFACE_PT.clay, surface: "clay" },
+    { key: "grass", label: SURFACE_PT.grass, surface: "grass" },
+  ];
+  const heat = (v: number | null) =>
+    v == null
+      ? "var(--secondary)"
+      : `color-mix(in oklab, ${v >= 0.5 ? "var(--win)" : "var(--loss)"} ${Math.round(20 + Math.min(Math.abs(v - 0.5) / 0.5, 1) * 65)}%, var(--card))`;
+  const pctText = (v: number | null) => (v == null ? "—" : `${Math.round(v * 100)}%`);
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[26rem] text-sm">
+        <thead className="border-b text-xs uppercase text-muted-foreground">
+          <tr>
+            <th className="px-2 py-2 text-left">Piso</th>
+            <th className="px-2 py-2 text-right">Jogos</th>
+            <th className="px-2 py-2 text-right">V–D</th>
+            <th className="px-2 py-2 text-center">Vitórias</th>
+            <th className="px-2 py-2 text-center">Sets</th>
+            <th className="px-2 py-2 text-center">Games</th>
+          </tr>
+        </thead>
+        <tbody className="tabular">
+          {rows.map((r) => {
+            const rec = surfaceRecord(results, r.surface);
+            return (
+              <tr key={r.key} className="border-b">
+                <td className="px-2 py-1.5 font-semibold">{r.label}</td>
+                <td className="px-2 py-1.5 text-right">{rec.n}</td>
+                <td className="px-2 py-1.5 text-right">{rec.n ? `${rec.w}–${rec.l}` : "—"}</td>
+                {[rec.rate, rec.setRate, rec.gameRate].map((v, i) => (
+                  <td key={i} className="px-1 py-1 text-center">
+                    <span
+                      className="block rounded-md px-2 py-1 font-semibold"
+                      style={{ background: heat(v) }}
+                    >
+                      {pctText(v)}
+                    </span>
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

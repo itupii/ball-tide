@@ -119,6 +119,79 @@ export async function getTennisHub({ data }: { data: { tour: Tour } }): Promise<
   );
 }
 
+/* ---------------- histórico de ~6 meses (para o ajuste por piso) ---------------- */
+
+const HISTORY_MONTHS = 6;
+
+/** `dates=YYYYMM` devolve os torneios do mês com todas as partidas; 6 chamadas cobrem ~6 meses. Cache de 12h, só se vier preenchido. */
+async function loadHistory(tour: Tour): Promise<TennisMatch[]> {
+  return cached(
+    `tennis:history:${tour}`,
+    12 * 3600_000,
+    async () => {
+      const now = new Date();
+      const months = Array.from({ length: HISTORY_MONTHS }, (_, i) => {
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+        return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      });
+      const res = await Promise.allSettled(
+        months.map((m) => getJson(`${SITE}/${tour}/scoreboard?dates=${m}`)),
+      );
+      const seen = new Map<string, TennisMatch>();
+      for (const r of res)
+        if (r.status === "fulfilled")
+          for (const m of parseScoreboard(r.value, tour))
+            if (m.state === "post" && m.winner) seen.set(m.id, m);
+      return [...seen.values()];
+    },
+    (v) => v.length > 0,
+  );
+}
+
+const compact = (m: TennisMatch): TennisMatch => ({
+  ...m,
+  a: { ...m.a, flag: null, seed: null },
+  b: { ...m.b, flag: null, seed: null },
+});
+
+/** Só as partidas de quem aparece na janela atual (e do jogador pedido), sem bandeiras: reduz o tamanho da resposta. */
+async function loadHistoryFor(tour: Tour, playerId?: string): Promise<TennisMatch[]> {
+  const [hist, cur] = await Promise.all([loadHistory(tour), loadMatches(tour)]);
+  const ids = new Set<string>(playerId ? [playerId] : []);
+  for (const m of cur.matches) {
+    ids.add(m.a.id);
+    ids.add(m.b.id);
+  }
+  return hist.filter((m) => ids.has(m.a.id) || ids.has(m.b.id)).map(compact);
+}
+
+const histIn = (d: unknown) =>
+  z
+    .object({
+      tour: z.enum(["atp", "wta"]),
+      playerId: z
+        .string()
+        .regex(/^\d{1,10}$/)
+        .optional(),
+    })
+    .parse(d);
+const histServer = createServerFn({ method: "GET" })
+  .inputValidator(histIn)
+  .handler(({ data }) => loadHistoryFor(data.tour, data.playerId));
+
+export async function getTennisHistory({
+  data,
+}: {
+  data: { tour: Tour; playerId?: string | undefined };
+}): Promise<TennisMatch[]> {
+  const v = histIn(data);
+  const r = await histServer({ data: v }).catch(() => null);
+  if (r && r.length) return r;
+  return typeof window !== "undefined"
+    ? loadHistoryFor(v.tour, v.playerId).catch(() => [])
+    : (r ?? []);
+}
+
 export interface TennisAthlete {
   profile: AthleteProfile | null;
   stats: { label: string; value: string }[];
